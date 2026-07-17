@@ -7,6 +7,7 @@ export type EventData = {
   limit: number;
   notes: string;
   photo?: string;
+  isDeleted?: boolean;
 };
 
 export type GuestStatus = 'prepared' | 'invited' | 'agree' | 'disagree';
@@ -64,11 +65,15 @@ export const resetDb = () => {
 };
 
 export const getEvents = (): EventData[] => {
-  return localCache.events;
+  return localCache.events.filter(e => !e.isDeleted);
+};
+
+export const getDeletedEvents = (): EventData[] => {
+  return localCache.events.filter(e => e.isDeleted);
 };
 
 export const getEvent = (id?: number): EventData | null => {
-  const events = localCache.events;
+  const events = getEvents();
   if (events.length === 0) return null;
   return id ? events.find(e => e.id === id) || null : events[0];
 };

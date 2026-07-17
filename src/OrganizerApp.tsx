@@ -6,8 +6,9 @@ import GuestsList from './screens/organizer/GuestsList';
 import TablesList from './screens/organizer/TablesList';
 import Reminders from './screens/organizer/Reminders';
 import Settings from './screens/organizer/Settings';
+import TrashBin from './screens/organizer/TrashBin';
 
-export type OrganizerScreen = 'events' | 'create_event' | 'event_detail' | 'guests' | 'tables' | 'reminders' | 'settings';
+export type OrganizerScreen = 'events' | 'create_event' | 'event_detail' | 'guests' | 'tables' | 'reminders' | 'settings' | 'trash_bin';
 
 export default function OrganizerApp() {
   const [currentScreen, setCurrentScreen] = useState<OrganizerScreen>('events');
@@ -26,6 +27,7 @@ export default function OrganizerApp() {
       {currentScreen === 'tables' && <TablesList onNavigate={navigate} />}
       {currentScreen === 'reminders' && <Reminders onNavigate={navigate} />}
       {currentScreen === 'settings' && <Settings onNavigate={navigate} />}
+      {currentScreen === 'trash_bin' && <TrashBin onNavigate={navigate} />}
     </div>
   );
 }

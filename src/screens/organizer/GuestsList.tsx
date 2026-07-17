@@ -15,6 +15,7 @@ export default function GuestsList({ onNavigate }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showAddGuest, setShowAddGuest] = useState(false);
   const [newGuest, setNewGuest] = useState({ firstName: '', lastName: '', phone: '' });
+  const [selectedGuestDetail, setSelectedGuestDetail] = useState<Guest | null>(null);
   
   useEffect(() => {
     WebApp.BackButton.show();
@@ -134,10 +135,19 @@ export default function GuestsList({ onNavigate }: Props) {
 
       <div className="space-y-4 mt-6">
         {guestsByTab.map(guest => (
-          <div key={guest.id} className="apple-glass p-5 rounded-[24px] shadow-lg flex items-center gap-4 hover:scale-[1.01] transition-transform cursor-pointer">
+          <div 
+            key={guest.id} 
+            onClick={() => {
+              if (tab === 'prepared') {
+                toggleSelect(guest.id);
+              } else {
+                setSelectedGuestDetail(guest);
+              }
+            }}
+            className="apple-glass p-5 rounded-[24px] shadow-lg flex items-center gap-4 hover:scale-[1.01] transition-transform cursor-pointer"
+          >
             {tab === 'prepared' && (
               <div 
-                onClick={() => toggleSelect(guest.id)}
                 className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${selected.has(guest.id) ? 'bg-blue-500 border-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'border-gray-400/50'}`}
               >
                 {selected.has(guest.id) && <Check size={16} strokeWidth={3} />}
@@ -243,6 +253,47 @@ export default function GuestsList({ onNavigate }: Props) {
               <button onClick={() => setShowAddGuest(false)} className="flex-1 p-4 rounded-[20px] bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-bold active:scale-95 transition-transform">Отмена</button>
               <button onClick={handleAddGuest} className="flex-1 p-4 rounded-[20px] bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold active:scale-95 transition-transform">Добавить</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {selectedGuestDetail && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-5" onClick={() => setSelectedGuestDetail(null)}>
+          <div className="apple-glass rounded-[32px] w-full max-w-sm p-8 shadow-2xl animate-float" onClick={e => e.stopPropagation()}>
+            <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">{selectedGuestDetail.firstName} {selectedGuestDetail.lastName}</h3>
+            <p className="text-gray-500 mb-6 font-medium">{selectedGuestDetail.phone}</p>
+            
+            <div className="space-y-4 mb-6">
+              <div className="bg-white/50 dark:bg-black/30 p-4 rounded-2xl border border-white/40 dark:border-white/10">
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-bold mb-1">Статус</p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {selectedGuestDetail.status === 'agree' ? '✅ Придет' : 
+                   selectedGuestDetail.status === 'disagree' ? '❌ Не придет' : 
+                   selectedGuestDetail.status === 'invited' ? '⏳ Ожидает ответа' : '📝 В списке'}
+                </p>
+              </div>
+
+              {selectedGuestDetail.companions && selectedGuestDetail.companions.length > 0 && (
+                <div className="bg-white/50 dark:bg-black/30 p-4 rounded-2xl border border-white/40 dark:border-white/10">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 font-bold mb-3">Спутники ({selectedGuestDetail.companions.length})</p>
+                  <ul className="space-y-2">
+                    {selectedGuestDetail.companions.map((comp, idx) => (
+                      <li key={idx} className="flex justify-between items-center bg-white/40 dark:bg-white/5 p-3 rounded-xl">
+                        <span className="font-medium text-gray-900 dark:text-white">{comp.name}</span>
+                        {comp.age && <span className="text-sm text-gray-500">{comp.age} лет</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            
+            <button 
+              onClick={() => setSelectedGuestDetail(null)} 
+              className="w-full p-4 rounded-[20px] bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-bold active:scale-95 transition-transform"
+            >
+              Закрыть
+            </button>
           </div>
         </div>
       )}

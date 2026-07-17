@@ -11,6 +11,7 @@ type Props = {
 export default function EventsList({ onNavigate }: Props) {
   const [events, setEvents] = useState<EventData[]>([]);
   const [guestStats, setGuestStats] = useState({ total: 0, invited: 0, agree: 0, disagree: 0 });
+  const [eventToDelete, setEventToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     WebApp.BackButton.hide();
@@ -28,6 +29,19 @@ export default function EventsList({ onNavigate }: Props) {
       });
     }
   }, []);
+
+  const handleDelete = async (id: number) => {
+    const event = getEvents().find(e => e.id === id);
+    if (event) {
+      event.isDeleted = true;
+      // In mockDb, we need to call saveEvent to persist the change to server
+      const { saveEvent } = await import('../../db/mockDb');
+      saveEvent(event);
+      setEvents(getEvents());
+      WebApp.HapticFeedback.notificationOccurred('success');
+    }
+    setEventToDelete(null);
+  };
 
   return (
     <div className="p-5 space-y-6  min-h-screen">
@@ -77,6 +91,18 @@ export default function EventsList({ onNavigate }: Props) {
                 <div className="text-[10px] font-bold uppercase tracking-wider">Идут</div>
               </div>
             </div>
+            
+            <div className="mt-4 flex justify-end">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEventToDelete(event.id);
+                }}
+                className="text-red-500 bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+              >
+                Удалить
+              </button>
+            </div>
           </div>
         )) : (
           <div className="text-center py-10 text-gray-500">
@@ -87,11 +113,42 @@ export default function EventsList({ onNavigate }: Props) {
 
       <button 
         onClick={() => onNavigate('create_event')}
-        className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 rounded-[20px] font-bold text-lg shadow-[0_8px_30px_rgba(59,130,246,0.4)] hover:shadow-[0_8px_40px_rgba(59,130,246,0.6)] active:scale-95 transition-all flex items-center justify-center gap-2"
+        className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 rounded-[20px] font-bold text-lg shadow-[0_8px_30px_rgba(59,130,246,0.4)] hover:shadow-[0_8px_40px_rgba(59,130,246,0.6)] active:scale-95 transition-all flex items-center justify-center gap-2 mb-4"
       >
         <Plus size={24} />
         Создать мероприятие
       </button>
+
+      <button 
+        onClick={() => onNavigate('trash_bin')}
+        className="w-full text-center text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors py-2"
+      >
+        Корзина
+      </button>
+
+      {/* Confirmation Modal */}
+      {eventToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/50 backdrop-blur-sm" onClick={() => setEventToDelete(null)}>
+          <div className="w-full max-w-sm bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-2 text-black dark:text-white">Удалить мероприятие?</h3>
+            <p className="text-gray-500 text-sm mb-6">Оно будет перемещено в Корзину, откуда его можно будет восстановить.</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setEventToDelete(null)}
+                className="flex-1 bg-gray-100 dark:bg-gray-800 text-black dark:text-white font-bold py-3 rounded-xl active:scale-95 transition-all"
+              >
+                Отмена
+              </button>
+              <button 
+                onClick={() => handleDelete(eventToDelete)}
+                className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-all"
+              >
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
