@@ -20,11 +20,27 @@ export default function EventDetail({ onNavigate }: Props) {
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [newDate, setNewDate] = useState('');
+  const [newAddress, setNewAddress] = useState('');
 
   useEffect(() => {
     const e = getEvent();
     setEvent(e);
-    if (e) setNewTitle(e.title);
+    if (e) {
+      setNewTitle(e.title);
+      // Format date for datetime-local input (YYYY-MM-DDThh:mm)
+      try {
+        const d = new Date(e.date);
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const formattedDate = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        setNewDate(formattedDate);
+      } catch (err) {
+        setNewDate(e.date);
+      }
+      setNewAddress(e.address);
+    }
     setGuestCount(getGuests().length);
     WebApp.MainButton.hide();
   }, []);
@@ -38,6 +54,15 @@ export default function EventDetail({ onNavigate }: Props) {
       saveEvent(updated); // I need to make sure saveEvent is imported
     }
     setIsEditingTitle(false);
+  };
+
+  const handleSaveDetails = () => {
+    if (newDate.trim() && newAddress.trim()) {
+      const updated = { ...event, date: new Date(newDate).toISOString(), address: newAddress.trim() };
+      setEvent(updated);
+      saveEvent(updated);
+    }
+    setIsEditingDetails(false);
   };
 
   const features = [
@@ -73,22 +98,52 @@ export default function EventDetail({ onNavigate }: Props) {
         </button>
       </div>
 
-      <div className="apple-glass rounded-[32px] p-6 shadow-2xl">
+      <div className="apple-glass rounded-[32px] p-6 shadow-2xl relative">
+        <button 
+          onClick={() => {
+            if (isEditingDetails) handleSaveDetails();
+            else setIsEditingDetails(true);
+          }}
+          className="absolute top-4 right-4 p-2 rounded-full bg-white/20 dark:bg-black/20 text-gray-500 hover:text-blue-500 transition-colors"
+        >
+          {isEditingDetails ? <span className="text-sm font-bold px-2">Сохранить</span> : <Edit3 size={18} />}
+        </button>
+
         <div className="flex justify-between items-center mb-5 border-b border-white/20 dark:border-white/10 pb-5">
-          <div>
+          <div className="w-full mr-4">
             <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Дата проведения</div>
-            <div className="font-extrabold text-lg text-gray-900 dark:text-white">{new Date(event.date).toLocaleDateString('ru-RU')}</div>
+            {isEditingDetails ? (
+              <input 
+                type="datetime-local" 
+                value={newDate}
+                onChange={e => setNewDate(e.target.value)}
+                className="font-extrabold text-lg text-gray-900 dark:text-white bg-transparent border-b-2 border-blue-500 outline-none w-full"
+              />
+            ) : (
+              <div className="font-extrabold text-lg text-gray-900 dark:text-white">{new Date(event.date).toLocaleDateString('ru-RU')}</div>
+            )}
           </div>
-          <div className="text-right">
-            <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Осталось дней</div>
-            <div className="font-extrabold text-2xl text-blue-500">
-              {Math.max(0, Math.ceil((new Date(event.date).getTime() - Date.now()) / (1000 * 3600 * 24)))}
+          {!isEditingDetails && (
+            <div className="text-right">
+              <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Осталось дней</div>
+              <div className="font-extrabold text-2xl text-blue-500">
+                {Math.max(0, Math.ceil((new Date(event.date).getTime() - Date.now()) / (1000 * 3600 * 24)))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         <div>
           <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Адрес</div>
-          <div className="font-extrabold text-gray-900 dark:text-white">{event.address}</div>
+          {isEditingDetails ? (
+            <input 
+              type="text" 
+              value={newAddress}
+              onChange={e => setNewAddress(e.target.value)}
+              className="font-extrabold text-gray-900 dark:text-white bg-transparent border-b-2 border-blue-500 outline-none w-full"
+            />
+          ) : (
+            <div className="font-extrabold text-gray-900 dark:text-white">{event.address}</div>
+          )}
         </div>
       </div>
 

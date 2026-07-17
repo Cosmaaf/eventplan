@@ -27,6 +27,7 @@ export type Guest = {
   tableId?: string;
   seatIndex?: number;
   companions: Companion[];
+  telegramUsername?: string;
 };
 
 export type TableGroup = 'bride' | 'groom' | 'vip' | 'kids' | 'others';
@@ -117,4 +118,36 @@ export const saveTables = (tables: Table[]) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(tables)
   });
+};
+
+export const deleteTable = (tableId: string) => {
+  const updatedTables = localCache.tables.filter(t => t.id !== tableId);
+  saveTables(updatedTables);
+  
+  // Unseat guests from this table
+  let changed = false;
+  const updatedGuests = localCache.guests.map(g => {
+    if (g.tableId === tableId) {
+      changed = true;
+      return { ...g, tableId: undefined, seatIndex: undefined };
+    }
+    return g;
+  });
+  if (changed) saveGuests(updatedGuests);
+};
+
+export const updateTable = (updatedTable: Table) => {
+  const updatedTables = localCache.tables.map(t => t.id === updatedTable.id ? updatedTable : t);
+  saveTables(updatedTables);
+
+  // Check if we need to unseat guests whose seatIndex >= new capacity
+  let changed = false;
+  const updatedGuests = localCache.guests.map(g => {
+    if (g.tableId === updatedTable.id && g.seatIndex !== undefined && g.seatIndex >= updatedTable.capacity) {
+      changed = true;
+      return { ...g, tableId: undefined, seatIndex: undefined };
+    }
+    return g;
+  });
+  if (changed) saveGuests(updatedGuests);
 };

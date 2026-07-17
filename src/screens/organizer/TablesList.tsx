@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getTables, saveTables, getGuests, saveGuests, Table, Guest } from '../../db/mockDb';
+import { getTables, saveTables, getGuests, saveGuests, Table, Guest, deleteTable, updateTable } from '../../db/mockDb';
 import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
-import { Plus, Users, X } from 'lucide-react';
+import { Plus, Users, X, Edit2, Trash2 } from 'lucide-react';
 
 type Props = {
   onNavigate: (screen: OrganizerScreen) => void;
@@ -15,30 +15,70 @@ export default function TablesList({ onNavigate }: Props) {
   // Modal state
   const [selectedSeat, setSelectedSeat] = useState<{tableId: string, seatIndex: number} | null>(null);
 
-  // Add Table Modal state
-  const [isAddingTable, setIsAddingTable] = useState(false);
+  // Table Modal state
+  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [editingTableId, setEditingTableId] = useState<string | null>(null);
   const [newTableName, setNewTableName] = useState('');
   const [newTableCapacity, setNewTableCapacity] = useState(8);
   const [newTableShape, setNewTableShape] = useState<'round' | 'rect'>('round');
+  const [tableToDelete, setTableToDelete] = useState<string | null>(null);
 
-  const handleAddTable = () => {
-    if (!newTableName.trim()) return;
-    
-    const newId = `t_${Date.now()}`;
-    const newTable: Table = {
-      id: newId,
-      name: newTableName.trim(),
-      shape: newTableShape,
-      capacity: newTableCapacity,
-      group: 'others'
-    };
-    const updated = [...tables, newTable];
-    setTables(updated);
-    saveTables(updated);
-    WebApp.HapticFeedback.notificationOccurred('success');
-    setIsAddingTable(false);
+  const openAddModal = () => {
+    setModalMode('add');
     setNewTableName('');
     setNewTableCapacity(8);
+    setNewTableShape('round');
+    setIsTableModalOpen(true);
+  };
+
+  const openEditModal = (table: Table) => {
+    setModalMode('edit');
+    setEditingTableId(table.id);
+    setNewTableName(table.name);
+    setNewTableCapacity(table.capacity);
+    setNewTableShape(table.shape);
+    setIsTableModalOpen(true);
+  };
+
+  const handleSaveTable = () => {
+    if (!newTableName.trim()) return;
+    
+    if (modalMode === 'add') {
+      const newId = `t_${Date.now()}`;
+      const newTable: Table = {
+        id: newId,
+        name: newTableName.trim(),
+        shape: newTableShape,
+        capacity: newTableCapacity,
+        group: 'others'
+      };
+      const updated = [...tables, newTable];
+      setTables(updated);
+      saveTables(updated);
+    } else if (editingTableId) {
+      const tableToUpdate: Table = {
+        id: editingTableId,
+        name: newTableName.trim(),
+        shape: newTableShape,
+        capacity: newTableCapacity,
+        group: 'others' // Or keep existing if we supported it
+      };
+      updateTable(tableToUpdate);
+      setTables(getTables());
+      setGuests(getGuests());
+    }
+    
+    WebApp.HapticFeedback.notificationOccurred('success');
+    setIsTableModalOpen(false);
+  };
+
+  const handleDeleteTable = (id: string) => {
+    deleteTable(id);
+    setTables(getTables());
+    setGuests(getGuests());
+    setTableToDelete(null);
+    WebApp.HapticFeedback.notificationOccurred('success');
   };
 
   useEffect(() => {
@@ -103,7 +143,17 @@ export default function TablesList({ onNavigate }: Props) {
           
           return (
             <div key={table.id} className="ios-card p-6 flex flex-col items-center relative shadow-sm border border-black/5 dark:border-white/10 mt-6">
-              <h2 className="text-xl font-bold mb-8 text-center text-black dark:text-white">{table.name}</h2>
+              <div className="flex justify-between items-start mb-8 w-full">
+                <h2 className="text-xl font-bold text-black dark:text-white">{table.name}</h2>
+                <div className="flex gap-2">
+                  <button onClick={() => openEditModal(table)} className="text-gray-400 hover:text-blue-500 transition-colors">
+                    <Edit2 size={18} />
+                  </button>
+                  <button onClick={() => setTableToDelete(table.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
               
               <div className="relative flex items-center justify-center w-full max-w-[280px] aspect-square mx-auto">
                 {/* Table Shape */}
@@ -147,19 +197,21 @@ export default function TablesList({ onNavigate }: Props) {
       </div>
 
       <button 
-        onClick={() => setIsAddingTable(true)}
+        onClick={openAddModal}
         className="fixed bottom-8 right-6 bg-blue-500 text-white p-5 rounded-full shadow-[0_8px_30px_rgba(59,130,246,0.5)] active:scale-95 transition-all z-20"
       >
         <Plus size={28} />
       </button>
 
-      {/* Add Table Modal */}
-      {isAddingTable && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/50 backdrop-blur-sm" onClick={() => setIsAddingTable(false)}>
+      {/* Table Modal */}
+      {isTableModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/50 backdrop-blur-sm" onClick={() => setIsTableModalOpen(false)}>
           <div className="w-full max-w-sm bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-black dark:text-white">Новый стол</h3>
-              <button onClick={() => setIsAddingTable(false)} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full">
+              <h3 className="text-xl font-bold text-black dark:text-white">
+                {modalMode === 'add' ? 'Новый стол' : 'Редактировать стол'}
+              </h3>
+              <button onClick={() => setIsTableModalOpen(false)} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full">
                 <X size={20} />
               </button>
             </div>
@@ -171,7 +223,7 @@ export default function TablesList({ onNavigate }: Props) {
                   type="text"
                   value={newTableName}
                   onChange={e => setNewTableName(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 rounded-xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
+                  className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 rounded-xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-black dark:text-white"
                 />
               </div>
               <div>
@@ -182,7 +234,7 @@ export default function TablesList({ onNavigate }: Props) {
                   max="20"
                   value={newTableCapacity}
                   onChange={e => setNewTableCapacity(parseInt(e.target.value) || 1)}
-                  className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 rounded-xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
+                  className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 rounded-xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-black dark:text-white"
                 />
               </div>
               
@@ -205,10 +257,34 @@ export default function TablesList({ onNavigate }: Props) {
               </div>
 
               <button 
-                onClick={handleAddTable}
+                onClick={handleSaveTable}
                 className="w-full mt-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all"
               >
-                Создать стол
+                {modalMode === 'add' ? 'Создать стол' : 'Сохранить изменения'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {tableToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/50 backdrop-blur-sm" onClick={() => setTableToDelete(null)}>
+          <div className="w-full max-w-sm bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-2 text-black dark:text-white">Удалить стол?</h3>
+            <p className="text-gray-500 text-sm mb-6">Все гости, сидящие за этим столом, останутся в списке, но потеряют свои места.</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setTableToDelete(null)}
+                className="flex-1 bg-gray-100 dark:bg-gray-800 text-black dark:text-white font-bold py-3 rounded-xl active:scale-95 transition-all"
+              >
+                Отмена
+              </button>
+              <button 
+                onClick={() => handleDeleteTable(tableToDelete)}
+                className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-all"
+              >
+                Удалить
               </button>
             </div>
           </div>

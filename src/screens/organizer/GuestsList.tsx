@@ -14,7 +14,7 @@ export default function GuestsList({ onNavigate }: Props) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showAddGuest, setShowAddGuest] = useState(false);
-  const [newGuest, setNewGuest] = useState({ firstName: '', lastName: '', phone: '' });
+  const [newGuest, setNewGuest] = useState({ firstName: '', lastName: '', phone: '', telegramUsername: '' });
   const [selectedGuestDetail, setSelectedGuestDetail] = useState<Guest | null>(null);
   
   useEffect(() => {
@@ -65,7 +65,15 @@ export default function GuestsList({ onNavigate }: Props) {
     if (firstGuest) {
       const inviteLink = `https://t.me/EventPremium_bot?start=${firstGuest.token}`;
       const text = `Привет! Приглашаю тебя на мероприятие: ${inviteLink}`;
-      WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(text)}`);
+      
+      if (firstGuest.telegramUsername) {
+        // Direct message link
+        const username = firstGuest.telegramUsername.replace('@', '');
+        WebApp.openTelegramLink(`https://t.me/${username}?text=${encodeURIComponent(text)}`);
+      } else {
+        // Fallback to share
+        WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(text)}`);
+      }
     }
 
     setSelected(new Set());
@@ -81,8 +89,13 @@ export default function GuestsList({ onNavigate }: Props) {
       WebApp.showAlert('Введите корректную фамилию (минимум 2 буквы).');
       return;
     }
+    // Phone or username must be provided
     const phoneRegex = /^\+?[0-9\s\-\(\)]{7,18}$/;
-    if (!phoneRegex.test(newGuest.phone)) {
+    if (!newGuest.phone && !newGuest.telegramUsername) {
+      WebApp.showAlert('Укажите номер телефона или Telegram username.');
+      return;
+    }
+    if (newGuest.phone && !phoneRegex.test(newGuest.phone)) {
       WebApp.showAlert('Введите корректный номер телефона.');
       return;
     }
@@ -92,6 +105,7 @@ export default function GuestsList({ onNavigate }: Props) {
       firstName: newGuest.firstName.trim(),
       lastName: newGuest.lastName.trim(),
       phone: newGuest.phone.trim(),
+      telegramUsername: newGuest.telegramUsername.trim(),
       status: 'prepared',
       token: `guest_man_${Date.now()}`,
       companions: []
@@ -100,7 +114,7 @@ export default function GuestsList({ onNavigate }: Props) {
     saveGuests(updated);
     setGuests(updated);
     setShowAddGuest(false);
-    setNewGuest({ firstName: '', lastName: '', phone: '' });
+    setNewGuest({ firstName: '', lastName: '', phone: '', telegramUsername: '' });
     WebApp.HapticFeedback.notificationOccurred('success');
   };
 
@@ -245,6 +259,13 @@ export default function GuestsList({ onNavigate }: Props) {
                   }
                   setNewGuest({...newGuest, phone: formatted || e.target.value});
                 }}
+                className="w-full bg-white/50 dark:bg-black/30 border border-white/40 dark:border-white/10 rounded-2xl p-4 outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-400/20 transition-all font-medium text-gray-900 dark:text-white"
+              />
+              <input 
+                type="text" 
+                placeholder="Telegram Username (напр. @ivan)"
+                value={newGuest.telegramUsername}
+                onChange={e => setNewGuest({...newGuest, telegramUsername: e.target.value})}
                 className="w-full bg-white/50 dark:bg-black/30 border border-white/40 dark:border-white/10 rounded-2xl p-4 outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-400/20 transition-all font-medium text-gray-900 dark:text-white"
               />
             </div>
