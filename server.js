@@ -168,10 +168,43 @@ app.post('/api/events', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/guests', async (req, res) => {
+app.get('/api/guests', requireAuth, async (req, res) => {
   const db = await getDb();
   const rows = await db.all('SELECT data FROM guests');
   res.json(rows.map(r => JSON.parse(r.data)));
+});
+
+app.get('/api/guest/:token', async (req, res) => {
+  const db = await getDb();
+  const token = req.params.token;
+  const row = await db.get('SELECT data FROM guests WHERE data LIKE ?', [`%"token":"${token}"%`]);
+  if (row) {
+    const guestData = JSON.parse(row.data);
+    let tableData = null;
+    if (guestData.tableId) {
+      const tableRow = await db.get('SELECT data FROM tables WHERE id = ?', [guestData.tableId]);
+      if (tableRow) tableData = JSON.parse(tableRow.data);
+    }
+    res.json({ success: true, guest: guestData, table: tableData });
+  } else {
+    res.json({ success: false, error: 'Guest not found' });
+  }
+});
+
+app.post('/api/guest/:token/rsvp', async (req, res) => {
+  const db = await getDb();
+  const token = req.params.token;
+  const { status, companions } = req.body;
+  const row = await db.get('SELECT id, data FROM guests WHERE data LIKE ?', [`%"token":"${token}"%`]);
+  if (row) {
+    const guestData = JSON.parse(row.data);
+    guestData.status = status;
+    guestData.companions = companions;
+    await db.run('UPDATE guests SET data = ? WHERE id = ?', [JSON.stringify(guestData), row.id]);
+    res.json({ success: true });
+  } else {
+    res.json({ success: false, error: 'Guest not found' });
+  }
 });
 
 app.post('/api/guests', requireAuth, async (req, res) => {
@@ -189,7 +222,7 @@ app.post('/api/guests', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/tables', async (req, res) => {
+app.get('/api/tables', requireAuth, async (req, res) => {
   const db = await getDb();
   const rows = await db.all('SELECT data FROM tables');
   res.json(rows.map(r => JSON.parse(r.data)));

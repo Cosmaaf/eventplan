@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getEvent, getGuests, saveGuests, getTables, Guest, Companion, EventData } from './db/mockDb';
+import { getEvent, getGuests, getTables, Guest, Companion, EventData, initGuestDb, saveGuestRsvp } from './db/mockDb';
 import WebApp from '@twa-dev/sdk';
 import { MapPin, Calendar, Heart, Plus, Minus, UserCheck, Check } from 'lucide-react';
 
@@ -15,31 +15,38 @@ export default function GuestApp({ guestToken }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [submitted, setSubmitted] = useState(false);
+  const [consent, setConsent] = useState(false); // 152-FZ consent
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const ev = getEvent();
-    setEvent(ev);
+    const loadData = async () => {
+      if (guestToken) {
+        await initGuestDb(guestToken);
+        const ev = getEvent();
+        setEvent(ev);
 
-    if (guestToken) {
-      const guests = getGuests();
-      const me = guests.find(g => g.token === guestToken);
-      if (me) {
-        setGuest(me);
-        if (me.companions) {
-          setCompanions(me.companions);
-        }
-        if (me.status === 'agree' || me.status === 'disagree') {
-          setSubmitted(true);
-        }
-        if (me.tableId) {
-          const table = getTables().find(t => t.id === me.tableId);
-          if (table) setTableName(table.name);
+        const guests = getGuests();
+        const me = guests.find(g => g.token === guestToken);
+        if (me) {
+          setGuest(me);
+          if (me.companions) {
+            setCompanions(me.companions);
+          }
+          if (me.status === 'agree' || me.status === 'disagree') {
+            setSubmitted(true);
+          }
+          if (me.tableId) {
+            const table = getTables().find(t => t.id === me.tableId);
+            if (table) setTableName(table.name);
+          }
         }
       }
-    }
+      setLoading(false);
+    };
+    loadData();
   }, [guestToken]);
 
-  if (!event || !guest) {
+  if (loading || !event || !guest) {
     return (
       <div className="min-h-screen flex items-center justify-center premium-bg">
         <div className="animate-pulse text-xl text-gray-500 font-serif">Загрузка приглашения...</div>
@@ -57,14 +64,8 @@ export default function GuestApp({ guestToken }: Props) {
   };
 
   const updateStatus = (status: 'agree' | 'disagree') => {
-    const allGuests = getGuests();
-    const updated = allGuests.map(g => {
-      if (g.id === guest.id) {
-        return { ...g, status, companions };
-      }
-      return g;
-    });
-    saveGuests(updated);
+    if (!guest || !guestToken) return;
+    saveGuestRsvp(guestToken, status, companions);
     setGuest({ ...guest, status, companions });
     setSubmitted(true);
     setShowForm(false);
@@ -196,8 +197,26 @@ export default function GuestApp({ guestToken }: Props) {
               )}
             </div>
 
+            <div className="flex items-start gap-3 mb-4">
+              <input 
+                type="checkbox" 
+                id="consent" 
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                className="mt-1 w-5 h-5 rounded border-gray-300 text-pink-500 focus:ring-pink-500"
+              />
+              <label htmlFor="consent" className="text-sm text-gray-500 dark:text-gray-400 leading-tight">
+                Я согласен(на) на обработку моих персональных данных и данных моих спутников в соответствии с требованиями 152-ФЗ.
+              </label>
+            </div>
+
             <button 
               onClick={() => {
+                if (!consent) {
+                  WebApp.showAlert('Необходимо дать согласие на обработку персональных данных.');
+                  WebApp.HapticFeedback.notificationOccurred('error');
+                  return;
+                }
                 // Validation: Prevent empty companion names
                 if (companions.some(c => c.name.trim() === '')) {
                   WebApp.showAlert('Пожалуйста, заполните имена всех спутников или удалите пустые поля.');

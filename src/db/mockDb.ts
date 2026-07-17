@@ -69,8 +69,23 @@ export const initDb = async () => {
   }
 };
 
-export const resetDb = () => {
-  // Not used in production, maybe keep a mock implementation or remove
+export const initGuestDb = async (guestToken: string) => {
+  try {
+    const [evRes, guRes] = await Promise.all([
+      fetch('/api/events'),
+      fetch(`/api/guest/${guestToken}`)
+    ]);
+    localCache.events = await evRes.json();
+    const guestData = await guRes.json();
+    if (guestData.success) {
+      localCache.guests = [guestData.guest];
+      if (guestData.table) {
+        localCache.tables = [guestData.table];
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load guest DB:', err);
+  }
 };
 
 export const getEvents = (): EventData[] => {
@@ -112,6 +127,20 @@ export const saveGuests = (guests: Guest[]) => {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(guests)
+  });
+};
+
+export const saveGuestRsvp = (guestToken: string, status: GuestStatus, companions: Companion[]) => {
+  const guests = localCache.guests;
+  const existing = guests.find(g => g.token === guestToken);
+  if (existing) {
+    existing.status = status;
+    existing.companions = companions;
+  }
+  fetch(`/api/guest/${guestToken}/rsvp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, companions })
   });
 };
 

@@ -13,11 +13,7 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initialize = async () => {
-      await initDb();
-      setLoading(false);
-    };
-    initialize();
+    // We will initialize DB later based on role
     
     const initData = WebApp.initDataUnsafe;
     const urlParams = new URLSearchParams(window.location.search);
@@ -38,7 +34,9 @@ function App() {
           if (data.success) {
             localStorage.setItem('adminToken', data.token);
             WebApp.showAlert('Вы успешно добавлены как администратор!');
+            await initDb();
             setRole('organizer');
+            setLoading(false);
             return;
           } else {
             WebApp.showAlert(data.error || 'Ошибка активации инвайта');
@@ -49,11 +47,13 @@ function App() {
       }
 
       if (initData && initData.start_param && !initData.start_param.startsWith('admin_invite_')) {
-        setRole('guest');
         setGuestToken(initData.start_param);
-      } else if (urlToken) {
         setRole('guest');
+        setLoading(false);
+      } else if (urlToken) {
         setGuestToken(urlToken);
+        setRole('guest');
+        setLoading(false);
       } else {
         // Check if user is already admin
         if (telegramInitData) {
@@ -66,7 +66,9 @@ function App() {
             const data = await res.json();
             if (data.success) {
               localStorage.setItem('adminToken', data.token);
+              await initDb();
               setRole('organizer');
+              setLoading(false);
               return;
             }
           } catch (err) {
@@ -74,6 +76,7 @@ function App() {
           }
         }
         setRole('login');
+        setLoading(false);
       }
     };
 
@@ -95,7 +98,12 @@ function App() {
       <div className="fixed top-40 -right-20 w-96 h-96 bg-blob-2 rounded-full mix-blend-screen filter blur-[100px] opacity-60 animate-blob animation-delay-2000 pointer-events-none z-[-1]"></div>
       <div className="fixed -bottom-20 left-20 w-96 h-96 bg-blob-3 rounded-full mix-blend-screen filter blur-[100px] opacity-60 animate-blob animation-delay-4000 pointer-events-none z-[-1]"></div>
 
-      {role === 'login' && <LoginApp onSuccess={() => setRole('organizer')} />}
+      {role === 'login' && <LoginApp onSuccess={async () => {
+        setLoading(true);
+        await initDb();
+        setRole('organizer');
+        setLoading(false);
+      }} />}
       {role === 'organizer' && <OrganizerApp />}
       {role === 'guest' && <GuestApp guestToken={guestToken} />}
     </div>
