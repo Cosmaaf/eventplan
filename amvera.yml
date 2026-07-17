@@ -1,0 +1,9 @@
+meta:
+  environment: nodejs
+  toolchain:
+    name: npm
+    version: 20
+build:
+  command: npm install express && npm run build
+run:
+  command: node server.js

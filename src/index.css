@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --glass-bg-light: rgba(255, 255, 255, 0.4);
+    --glass-bg-dark: rgba(0, 0, 0, 0.4);
+    --glass-border-light: rgba(255, 255, 255, 0.6);
+    --glass-border-dark: rgba(255, 255, 255, 0.1);
+  }
+  
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Clean iOS-like Design */
+body {
+  background-color: #f2f2f7;
+  color: #000;
+}
+
+.dark body {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.ios-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+}
+
+.dark .ios-card {
+  background: #1c1c1e;
+  box-shadow: none;
+}
+
+/* Base styles for standard UI */
+.bg-tg-bg {
+  background-color: var(--tg-theme-bg-color, #ffffff);
+}
+.text-tg-text {
+  color: var(--tg-theme-text-color, #000000);
+}
+.bg-tg-section {
+  background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+}
+.text-tg-hint {
+  color: var(--tg-theme-hint-color, #999999);
+}
+.bg-tg-button {
+  background-color: var(--tg-theme-button-color, #007aff);
+}
+.text-tg-button-text {
+  color: var(--tg-theme-button-text-color, #ffffff);
+}
