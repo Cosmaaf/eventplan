@@ -91,7 +91,7 @@ export default function Settings({ onNavigate }: Props) {
               const res = await fetch('/api/auth/generate-invite', { method: 'POST' });
               const data = await res.json();
               if (data.success) {
-                const inviteLink = `https://t.me/event_pllan_bot?start=admin_invite_${data.token}`;
+                const inviteLink = `https://t.me/ewrewfsd_bot?start=admin_invite_${data.token}`;
                 // Let's create an elegant popup or just show alert
                 WebApp.showPopup({
                   title: 'Ссылка-приглашение',
