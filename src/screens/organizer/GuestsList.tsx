@@ -63,8 +63,8 @@ export default function GuestsList({ onNavigate }: Props) {
     const firstGuest = guests.find(g => g.id === firstSelectedId);
     
     if (firstGuest) {
-      const inviteLink = `https://t.me/ewrewfsd_bot?start=${firstGuest.token}`;
-      const text = `Привет! Приглашаю тебя на свадьбу: ${inviteLink}`;
+      const inviteLink = `https://t.me/EventPremium_bot?start=${firstGuest.token}`;
+      const text = `Привет! Приглашаю тебя на мероприятие: ${inviteLink}`;
       WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(text)}`);
     }
 
