@@ -124,7 +124,7 @@ export default function EventDetail({ onNavigate }: Props) {
             )}
           </div>
           {!isEditingDetails && (
-            <div className="text-right">
+            <div className="text-right pr-10">
               <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Осталось дней</div>
               <div className="font-extrabold text-2xl text-blue-500">
                 {Math.max(0, Math.ceil((new Date(event.date).getTime() - Date.now()) / (1000 * 3600 * 24)))}
