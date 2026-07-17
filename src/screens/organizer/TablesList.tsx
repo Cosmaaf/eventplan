@@ -128,7 +128,7 @@ export default function TablesList({ onNavigate }: Props) {
             name: `Стол ${tables.length + 1}`,
             shape: 'round',
             capacity: 8,
-            group: 'guest'
+            group: 'others'
           };
           const updated = [...tables, newTable];
           setTables(updated);
