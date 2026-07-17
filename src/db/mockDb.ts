@@ -58,12 +58,15 @@ export const initDb = async () => {
   try {
     const [evRes, guRes, taRes] = await Promise.all([
       fetch('/api/events'),
-      fetch('/api/guests'),
-      fetch('/api/tables')
+      fetch('/api/guests', { headers: getAuthHeaders() }),
+      fetch('/api/tables', { headers: getAuthHeaders() })
     ]);
-    localCache.events = await evRes.json();
-    localCache.guests = await guRes.json();
-    localCache.tables = await taRes.json();
+    const evData = await evRes.json();
+    const guData = await guRes.json();
+    const taData = await taRes.json();
+    localCache.events = Array.isArray(evData) ? evData : [];
+    localCache.guests = Array.isArray(guData) ? guData : [];
+    localCache.tables = Array.isArray(taData) ? taData : [];
   } catch (err) {
     console.error('Failed to load DB:', err);
   }
