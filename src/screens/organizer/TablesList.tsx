@@ -66,7 +66,7 @@ export default function TablesList({ onNavigate }: Props) {
   };
 
   return (
-    <div className="p-5 space-y-8 pb-32 bg-[#f2f2f7] dark:bg-black min-h-screen">
+    <div className="p-5 space-y-8 pb-32 min-h-screen">
       <h1 className="text-3xl font-extrabold tracking-tight mb-2 text-black dark:text-white">Схема зала</h1>
       <p className="text-gray-500 mb-6 text-sm">Нажмите на стул, чтобы посадить гостя</p>
 
@@ -104,7 +104,10 @@ export default function TablesList({ onNavigate }: Props) {
                       }}
                     >
                       {seatedGuest ? (
-                        <span className="text-xs font-bold truncate px-1">{seatedGuest.firstName.slice(0,4)}</span>
+                        <div className="flex flex-col items-center justify-center w-full h-full p-1 leading-none">
+                          <span className="text-[10px] font-bold text-center truncate w-full">{seatedGuest.firstName}</span>
+                          <span className="text-[9px] font-medium text-center truncate w-full opacity-90">{seatedGuest.lastName}</span>
+                        </div>
                       ) : (
                         <span className="text-sm font-medium">{i + 1}</span>
                       )}
@@ -118,7 +121,21 @@ export default function TablesList({ onNavigate }: Props) {
       </div>
 
       <button 
-        onClick={() => WebApp.showAlert('В разработке')}
+        onClick={() => {
+          const newId = `t_${Date.now()}`;
+          const newTable: Table = {
+            id: newId,
+            name: `Стол ${tables.length + 1}`,
+            shape: 'round',
+            capacity: 8,
+            group: 'guest'
+          };
+          const updated = [...tables, newTable];
+          setTables(updated);
+          // Assuming saveTables is available, need to import it
+          import('../../db/mockDb').then(m => m.saveTables(updated));
+          WebApp.HapticFeedback.notificationOccurred('success');
+        }}
         className="fixed bottom-8 right-6 bg-blue-500 text-white p-5 rounded-full shadow-[0_8px_30px_rgba(59,130,246,0.5)] active:scale-95 transition-all z-20"
       >
         <Plus size={28} />

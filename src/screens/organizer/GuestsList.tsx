@@ -104,7 +104,7 @@ export default function GuestsList({ onNavigate }: Props) {
   };
 
   return (
-    <div className="p-5 space-y-6 pb-32 mesh-bg min-h-screen">
+    <div className="p-5 space-y-6 pb-32  min-h-screen">
       <div className="flex items-center gap-3 bg-white/50 dark:bg-black/30 p-3 rounded-2xl shadow-inner border border-white/40 dark:border-white/10 backdrop-blur-md">
         <Search size={22} className="text-gray-500 dark:text-gray-400 ml-2" />
         <input 
@@ -218,10 +218,23 @@ export default function GuestsList({ onNavigate }: Props) {
                 className="w-full bg-white/50 dark:bg-black/30 border border-white/40 dark:border-white/10 rounded-2xl p-4 outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-400/20 transition-all font-medium text-gray-900 dark:text-white"
               />
               <input 
-                type="text" 
-                placeholder="Телефон"
+                type="tel" 
+                placeholder="+7 (999) 000-00-00"
                 value={newGuest.phone}
-                onChange={e => setNewGuest({...newGuest, phone: e.target.value})}
+                onChange={e => {
+                  let val = e.target.value.replace(/[^\d]/g, '');
+                  if (val.startsWith('8')) val = '7' + val.slice(1);
+                  if (val.startsWith('9')) val = '7' + val;
+                  let formatted = '';
+                  if (val.length > 0) {
+                    formatted = '+7';
+                    if (val.length > 1) formatted += ` (${val.slice(1, 4)}`;
+                    if (val.length > 4) formatted += `) ${val.slice(4, 7)}`;
+                    if (val.length > 7) formatted += `-${val.slice(7, 9)}`;
+                    if (val.length > 9) formatted += `-${val.slice(9, 11)}`;
+                  }
+                  setNewGuest({...newGuest, phone: formatted || e.target.value});
+                }}
                 className="w-full bg-white/50 dark:bg-black/30 border border-white/40 dark:border-white/10 rounded-2xl p-4 outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-400/20 transition-all font-medium text-gray-900 dark:text-white"
               />
             </div>

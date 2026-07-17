@@ -135,6 +135,52 @@ app.post('/api/tables', async (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/reminders', async (req, res) => {
+  try {
+    const { templates } = req.body;
+    const db = await getDb();
+    
+    // Fetch all guests with telegram_id
+    const rows = await db.all('SELECT data, telegram_id FROM guests WHERE telegram_id IS NOT NULL');
+    
+    let sentCount = 0;
+    for (const row of rows) {
+      if (!row.telegram_id) continue;
+      const guest = JSON.parse(row.data);
+      
+      let messageText = `Здравствуйте, ${guest.firstName}! Напоминание о предстоящем событии.`;
+      
+      if (templates.includes('7d') && guest.status === 'invited') {
+        messageText = `Здравствуйте, ${guest.firstName}! Пожалуйста, подтвердите ваше присутствие на нашем мероприятии!`;
+      } else if (templates.includes('1d') && guest.status === 'agree') {
+        messageText = `Здравствуйте, ${guest.firstName}! Напоминаем, что наше мероприятие уже завтра! Ждем вас!`;
+      } else if (templates.includes('3d') && guest.status === 'agree') {
+        messageText = `Здравствуйте, ${guest.firstName}! Напоминаем про дресс-код на наше мероприятие через 3 дня!`;
+      } else {
+        continue; // Skip if no matching template for their status
+      }
+      
+      try {
+        await bot.sendMessage(row.telegram_id, messageText, {
+          reply_markup: {
+            inline_keyboard: [[
+              { text: 'Открыть EventPlan', web_app: { url: amveraUrl } }
+            ]]
+          }
+        });
+        sentCount++;
+      } catch (err) {
+        console.error(`Failed to send to ${row.telegram_id}:`, err.message);
+      }
+    }
+    
+    res.json({ success: true, message: `Успешно отправлено ${sentCount} сообщений!` });
+  } catch (err) {
+    console.error('Error sending reminders:', err);
+    res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+});
+
 
 app.use(express.static(path.join(__dirname, 'dist')));
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getEvent, EventData, getGuests } from '../../db/mockDb';
+import { getEvent, EventData, getGuests, saveEvent } from '../../db/mockDb';
 import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Users, LayoutDashboard, Bell, Edit3 } from 'lucide-react';
@@ -18,13 +18,27 @@ export default function EventDetail({ onNavigate }: Props) {
     return () => WebApp.BackButton.offClick(() => onNavigate('events'));
   }, [onNavigate]);
 
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+
   useEffect(() => {
-    setEvent(getEvent());
+    const e = getEvent();
+    setEvent(e);
+    if (e) setNewTitle(e.title);
     setGuestCount(getGuests().length);
     WebApp.MainButton.hide();
   }, []);
 
   if (!event) return null;
+
+  const handleSaveTitle = () => {
+    if (newTitle.trim()) {
+      const updated = { ...event, title: newTitle.trim() };
+      setEvent(updated);
+      saveEvent(updated); // I need to make sure saveEvent is imported
+    }
+    setIsEditingTitle(false);
+  };
 
   const features = [
     { id: 'guests', title: 'Список гостей', icon: <Users size={24} />, desc: `${guestCount} гостей`, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30' },
@@ -33,10 +47,27 @@ export default function EventDetail({ onNavigate }: Props) {
   ];
 
   return (
-    <div className="p-5 space-y-6 mesh-bg min-h-screen">
+    <div className="p-5 space-y-6  min-h-screen">
       <div className="flex justify-between items-center mb-2">
-        <h1 className="text-3xl font-extrabold truncate pr-4 text-transparent bg-clip-text bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">{event.title}</h1>
-        <button className="p-3 rounded-full bg-white/50 dark:bg-black/30 shadow-sm text-blue-500 hover:scale-105 active:scale-95 transition-all">
+        {isEditingTitle ? (
+          <input
+            type="text"
+            value={newTitle}
+            onChange={e => setNewTitle(e.target.value)}
+            onBlur={handleSaveTitle}
+            autoFocus
+            className="text-3xl font-extrabold w-full mr-4 bg-transparent border-b-2 border-blue-500 outline-none text-gray-900 dark:text-white"
+          />
+        ) : (
+          <h1 className="text-3xl font-extrabold truncate pr-4 text-transparent bg-clip-text bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">{event.title}</h1>
+        )}
+        <button 
+          onClick={() => {
+            if (isEditingTitle) handleSaveTitle();
+            else setIsEditingTitle(true);
+          }}
+          className="p-3 rounded-full bg-white/50 dark:bg-black/30 shadow-sm text-blue-500 hover:scale-105 active:scale-95 transition-all"
+        >
           <Edit3 size={24} />
         </button>
       </div>

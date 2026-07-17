@@ -43,7 +43,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f2f2f7] dark:bg-black text-black dark:text-white transition-colors duration-500">
+    <div className="min-h-screen text-black dark:text-white transition-colors duration-500">
       {role === 'organizer' ? (
         <OrganizerApp />
       ) : (

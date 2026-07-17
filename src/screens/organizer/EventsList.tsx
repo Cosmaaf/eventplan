@@ -30,7 +30,7 @@ export default function EventsList({ onNavigate }: Props) {
   }, []);
 
   return (
-    <div className="p-5 space-y-6 mesh-bg min-h-screen">
+    <div className="p-5 space-y-6  min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">Мероприятия</h1>
       </div>
