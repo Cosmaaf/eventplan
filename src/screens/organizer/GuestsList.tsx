@@ -56,9 +56,19 @@ export default function GuestsList({ onNavigate }: Props) {
     });
     saveGuests(updated);
     setGuests(updated);
+
+    // Generate link for the first selected guest to share
+    const firstSelectedId = Array.from(selected)[0];
+    const firstGuest = guests.find(g => g.id === firstSelectedId);
+    
+    if (firstGuest) {
+      const inviteLink = `https://t.me/ewrewfsd_bot?start=${firstGuest.token}`;
+      const text = `Привет! Приглашаю тебя на свадьбу: ${inviteLink}`;
+      WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(text)}`);
+    }
+
     setSelected(new Set());
     WebApp.HapticFeedback.notificationOccurred('success');
-    WebApp.showAlert(`Приглашения отправлены ${selected.size} гостям!\n(Симуляция)`);
   };
 
   const handleAddGuest = () => {

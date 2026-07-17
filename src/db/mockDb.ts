@@ -38,88 +38,78 @@ export type Table = {
   group: TableGroup;
 };
 
-export const initDb = () => {
-  if (!localStorage.getItem('events')) {
-    const defaultEvents: EventData[] = [{
-      id: 1,
-      title: 'Свадьба Давидян',
-      date: '2026-08-29T18:00',
-      address: 'LOFTHALL, ул. Жужа д.3, Москва',
-      status: 'active',
-      limit: 100,
-      notes: 'Dress code: Black Tie',
-    }];
-    localStorage.setItem('events', JSON.stringify(defaultEvents));
-  }
+let localCache = {
+  events: [] as EventData[],
+  guests: [] as Guest[],
+  tables: [] as Table[]
+};
 
-  if (!localStorage.getItem('guests')) {
-    const defaultGuests: Guest[] = Array.from({ length: 12 }).map((_, i) => {
-      const statuses: GuestStatus[] = ['prepared', 'invited', 'agree', 'disagree'];
-      const st = statuses[i % 4];
-      return {
-        id: `g_${i}`,
-        firstName: `Гость ${i + 1}`,
-        lastName: `Фамилия ${i + 1}`,
-        phone: `+799900000${i.toString().padStart(2, '0')}`,
-        status: st,
-        token: `guest_${i + 1}`,
-        companions: st === 'agree' && i % 2 === 0 ? [{ name: 'Спутник 1' }] : []
-      };
-    });
-    localStorage.setItem('guests', JSON.stringify(defaultGuests));
-  }
-
-  if (!localStorage.getItem('tables')) {
-    const defaultTables: Table[] = [
-      { id: 't_1', name: 'Стол молодых', shape: 'rect', capacity: 2, group: 'bride' },
-      { id: 't_2', name: 'Семья жениха', shape: 'round', capacity: 10, group: 'groom' },
-      { id: 't_3', name: 'VIP Гости', shape: 'round', capacity: 8, group: 'vip' },
-    ];
-    localStorage.setItem('tables', JSON.stringify(defaultTables));
+export const initDb = async () => {
+  try {
+    const [evRes, guRes, taRes] = await Promise.all([
+      fetch('/api/events'),
+      fetch('/api/guests'),
+      fetch('/api/tables')
+    ]);
+    localCache.events = await evRes.json();
+    localCache.guests = await guRes.json();
+    localCache.tables = await taRes.json();
+  } catch (err) {
+    console.error('Failed to load DB:', err);
   }
 };
 
 export const resetDb = () => {
-  localStorage.clear();
-  initDb();
+  // Not used in production, maybe keep a mock implementation or remove
 };
 
 export const getEvents = (): EventData[] => {
-  const data = localStorage.getItem('events');
-  return data ? JSON.parse(data) : [];
+  return localCache.events;
 };
 
 export const getEvent = (id?: number): EventData | null => {
-  const events = getEvents();
+  const events = localCache.events;
   if (events.length === 0) return null;
   return id ? events.find(e => e.id === id) || null : events[0];
 };
 
 export const saveEvent = (event: EventData) => {
-  const events = getEvents();
+  const events = localCache.events;
   const existingIndex = events.findIndex(e => e.id === event.id);
   if (existingIndex >= 0) {
     events[existingIndex] = event;
   } else {
     events.push(event);
   }
-  localStorage.setItem('events', JSON.stringify(events));
+  fetch('/api/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(event)
+  });
 };
 
 export const getGuests = (): Guest[] => {
-  const data = localStorage.getItem('guests');
-  return data ? JSON.parse(data) : [];
+  return localCache.guests;
 };
 
 export const saveGuests = (guests: Guest[]) => {
-  localStorage.setItem('guests', JSON.stringify(guests));
+  localCache.guests = guests;
+  fetch('/api/guests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(guests)
+  });
 };
 
 export const getTables = (): Table[] => {
-  const data = localStorage.getItem('tables');
-  return data ? JSON.parse(data) : [];
+  return localCache.tables;
 };
 
 export const saveTables = (tables: Table[]) => {
-  localStorage.setItem('tables', JSON.stringify(tables));
+  localCache.tables = tables;
+  fetch('/api/tables', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(tables)
+  });
 };

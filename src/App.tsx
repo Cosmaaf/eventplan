@@ -10,9 +10,14 @@ export type Role = 'organizer' | 'guest';
 function App() {
   const [role, setRole] = useState<Role>('organizer');
   const [guestToken, setGuestToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initDb();
+    const initialize = async () => {
+      await initDb();
+      setLoading(false);
+    };
+    initialize();
     
     // Check for startapp param from Telegram
     const initData = WebApp.initDataUnsafe;
@@ -28,6 +33,14 @@ function App() {
       }
     }
   }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f2f2f7] dark:bg-black">
+        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f2f2f7] dark:bg-black text-black dark:text-white transition-colors duration-500">
