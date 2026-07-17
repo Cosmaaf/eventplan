@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 80;
 
 const token = '8286647302:AAFIUaqwwWT5EntLcr1fwJy9EQCIwz0I4GM';
-const amveraUrl = 'https://ilya12321dq-qwqwe.amvera.io'; // Amvera URL
+const amveraUrl = 'https://qwqwe-ilya12321dq.waw0.amvera.tech'; // Amvera URL
 
 const bot = new TelegramBot(token, { polling: true });
 
