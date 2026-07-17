@@ -16,6 +16,8 @@ if (!fs.existsSync(dataDir)) {
 
 let dbInstance = null;
 
+let initPromise = null;
+
 export const initDb = async () => {
   if (dbInstance) return dbInstance;
 
@@ -87,6 +89,9 @@ export const initDb = async () => {
 };
 
 export const getDb = async () => {
-  if (!dbInstance) return await initDb();
-  return dbInstance;
+  if (dbInstance) return dbInstance;
+  if (!initPromise) {
+    initPromise = initDb();
+  }
+  return await initPromise;
 };
