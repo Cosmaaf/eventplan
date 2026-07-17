@@ -81,6 +81,35 @@ export default function Settings({ onNavigate }: Props) {
           </button>
         </form>
       </div>
+
+      <div className="apple-glass p-6 rounded-[32px] shadow-xl">
+        <h2 className="text-xl font-bold mb-2">Пригласить со-организатора</h2>
+        <p className="text-sm text-gray-500 mb-4">Сгенерируйте секретную ссылку, чтобы другой человек получил доступ в админку без ввода пароля.</p>
+        <button 
+          onClick={async () => {
+            try {
+              const res = await fetch('/api/auth/generate-invite', { method: 'POST' });
+              const data = await res.json();
+              if (data.success) {
+                const inviteLink = `https://t.me/event_pllan_bot?start=admin_invite_${data.token}`;
+                // Let's create an elegant popup or just show alert
+                WebApp.showPopup({
+                  title: 'Ссылка-приглашение',
+                  message: `Отправьте эту ссылку со-организатору:\n\n${inviteLink}\n\nОна скопирована в буфер обмена.`,
+                  buttons: [{ type: 'ok' }]
+                });
+                navigator.clipboard.writeText(inviteLink);
+                WebApp.HapticFeedback.notificationOccurred('success');
+              }
+            } catch (err) {
+              WebApp.showAlert('Ошибка генерации ссылки');
+            }
+          }}
+          className="w-full bg-white/10 border border-white/20 text-blue-500 font-bold py-4 rounded-2xl active:scale-95 transition-all"
+        >
+          Сгенерировать ссылку
+        </button>
+      </div>
     </div>
   );
 }

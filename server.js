@@ -30,10 +30,25 @@ const bot = new TelegramBot(token, { polling: true });
 
     bot.onText(/\/start (.+)/, async (msg, match) => {
       const chatId = msg.chat.id;
-      const guestToken = match[1];
+      const startParam = match[1];
+
+      if (startParam.startsWith('admin_invite_')) {
+        const token = startParam.replace('admin_invite_', '');
+        bot.sendMessage(chatId, 'Вы приглашены стать со-организатором! Нажмите кнопку ниже, чтобы принять приглашение.', {
+          reply_markup: {
+            inline_keyboard: [[
+              {
+                text: 'Принять приглашение',
+                web_app: { url: `${amveraUrl}?admin_invite=${token}` } 
+              }
+            ]]
+          }
+        });
+        return;
+      }
 
       const db = await getDb();
-      const row = await db.get('SELECT id, data FROM guests WHERE data LIKE ?', [`%"token":"${guestToken}"%`]);
+      const row = await db.get('SELECT id, data FROM guests WHERE data LIKE ?', [`%"token":"${startParam}"%`]);
 
       if (row) {
         const guestData = JSON.parse(row.data);
@@ -182,13 +197,70 @@ app.post('/api/reminders', async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { password } = req.body;
+  const { password, telegramId } = req.body;
   const db = await getDb();
   const row = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_password']);
   if (row && row.value === password) {
+    if (telegramId) {
+      let adminUsersRow = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_users']);
+      let adminUsers = adminUsersRow ? JSON.parse(adminUsersRow.value) : [];
+      if (!adminUsers.includes(telegramId)) {
+        adminUsers.push(telegramId);
+        if (adminUsersRow) {
+          await db.run('UPDATE settings SET value = ? WHERE key = ?', [JSON.stringify(adminUsers), 'admin_users']);
+        } else {
+          await db.run('INSERT INTO settings (key, value) VALUES (?, ?)', ['admin_users', JSON.stringify(adminUsers)]);
+        }
+      }
+    }
     res.json({ success: true });
   } else {
     res.json({ success: false, error: 'Неверный пароль' });
+  }
+});
+
+app.post('/api/auth/check', async (req, res) => {
+  const { telegramId } = req.body;
+  if (!telegramId) return res.json({ success: false });
+
+  const db = await getDb();
+  const row = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_users']);
+  const adminUsers = row ? JSON.parse(row.value) : [];
+  if (adminUsers.includes(telegramId)) {
+    res.json({ success: true });
+  } else {
+    res.json({ success: false });
+  }
+});
+
+app.post('/api/auth/generate-invite', async (req, res) => {
+  const db = await getDb();
+  const inviteToken = 'adm_' + Math.random().toString(36).substr(2, 9);
+  await db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [`invite_${inviteToken}`, Date.now().toString()]);
+  res.json({ success: true, token: inviteToken });
+});
+
+app.post('/api/auth/join', async (req, res) => {
+  const { token, telegramId } = req.body;
+  const db = await getDb();
+  const row = await db.get('SELECT value FROM settings WHERE key = ?', [`invite_${token}`]);
+  if (row) {
+    // Valid invite token
+    if (telegramId) {
+      let adminUsersRow = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_users']);
+      let adminUsers = adminUsersRow ? JSON.parse(adminUsersRow.value) : [];
+      if (!adminUsers.includes(telegramId)) {
+        adminUsers.push(telegramId);
+        if (adminUsersRow) {
+          await db.run('UPDATE settings SET value = ? WHERE key = ?', [JSON.stringify(adminUsers), 'admin_users']);
+        } else {
+          await db.run('INSERT INTO settings (key, value) VALUES (?, ?)', ['admin_users', JSON.stringify(adminUsers)]);
+        }
+      }
+    }
+    res.json({ success: true });
+  } else {
+    res.json({ success: false, error: 'Неверный или просроченный инвайт' });
   }
 });
 
@@ -210,6 +282,71 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
+
+// Auto Reminders Service
+let lastSentDate = '';
+
+setInterval(async () => {
+  try {
+    const now = new Date();
+    // Run at 10 AM UTC (or local time depending on server)
+    if (now.getHours() === 10) {
+      const todayStr = now.toISOString().split('T')[0];
+      if (lastSentDate === todayStr) return; // Already sent today
+      
+      const db = await getDb();
+      // Fetch event data to know the event date
+      const eventRow = await db.get('SELECT data FROM events LIMIT 1');
+      if (!eventRow) return;
+      const event = JSON.parse(eventRow.data);
+      if (!event.date) return;
+      
+      const daysUntil = Math.max(0, Math.ceil((new Date(event.date).getTime() - Date.now()) / (1000 * 3600 * 24)));
+      let templates = [];
+      
+      if (daysUntil === 7) templates.push('7d');
+      else if (daysUntil === 3) templates.push('3d');
+      else if (daysUntil === 1) templates.push('1d');
+      
+      if (templates.length > 0) {
+        // We can reuse the reminder logic
+        const rows = await db.all('SELECT data, telegram_id FROM guests WHERE telegram_id IS NOT NULL');
+        
+        for (const row of rows) {
+          if (!row.telegram_id) continue;
+          const guest = JSON.parse(row.data);
+          let messageText = '';
+          
+          if (templates.includes('7d') && guest.status === 'invited') {
+            messageText = `Здравствуйте, ${guest.firstName}! Пожалуйста, подтвердите ваше присутствие на нашем мероприятии!`;
+          } else if (templates.includes('1d') && guest.status === 'agree') {
+            messageText = `Здравствуйте, ${guest.firstName}! Напоминаем, что наше мероприятие уже завтра! Ждем вас!`;
+          } else if (templates.includes('3d') && guest.status === 'agree') {
+            messageText = `Здравствуйте, ${guest.firstName}! Напоминаем про дресс-код на наше мероприятие через 3 дня!`;
+          }
+          
+          if (messageText) {
+            try {
+              await bot.sendMessage(row.telegram_id, messageText, {
+                reply_markup: {
+                  inline_keyboard: [[
+                    { text: 'Открыть EventPlan', web_app: { url: `${amveraUrl}?token=${guest.token}` } }
+                  ]]
+                }
+              });
+            } catch(e) {
+              console.error(e);
+            }
+          }
+        }
+        lastSentDate = todayStr;
+      }
+    }
+  } catch (err) {
+    console.error('Auto reminder error:', err);
+  }
+}, 60 * 60 * 1000); // Check every hour
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

@@ -20,21 +20,63 @@ function App() {
     };
     initialize();
     
-    // Check for start_param or token from URL
     const initData = WebApp.initDataUnsafe;
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get('token');
+    const adminInvite = urlParams.get('admin_invite');
+    const telegramId = initData?.user?.id?.toString();
 
-    if (initData && initData.start_param) {
-      setRole('guest');
-      setGuestToken(initData.start_param);
-    } else if (urlToken) {
-      setRole('guest');
-      setGuestToken(urlToken);
-    } else {
-      // Show login
-      setRole('login');
-    }
+    const authCheck = async () => {
+      if (adminInvite) {
+        // Attempt to join as admin
+        try {
+          const res = await fetch('/api/auth/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: adminInvite, telegramId })
+          });
+          const data = await res.json();
+          if (data.success) {
+            WebApp.showAlert('Вы успешно добавлены как администратор!');
+            setRole('organizer');
+            return;
+          } else {
+            WebApp.showAlert(data.error || 'Ошибка активации инвайта');
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      if (initData && initData.start_param) {
+        setRole('guest');
+        setGuestToken(initData.start_param);
+      } else if (urlToken) {
+        setRole('guest');
+        setGuestToken(urlToken);
+      } else {
+        // Check if telegram ID is already admin
+        if (telegramId) {
+          try {
+            const res = await fetch('/api/auth/check', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ telegramId })
+            });
+            const data = await res.json();
+            if (data.success) {
+              setRole('organizer');
+              return;
+            }
+          } catch (err) {
+            console.error(err);
+          }
+        }
+        setRole('login');
+      }
+    };
+
+    authCheck();
   }, []);
 
   if (loading) {
@@ -46,7 +88,12 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen text-black dark:text-white transition-colors duration-500">
+    <div className="min-h-screen text-black dark:text-white transition-colors duration-500 relative overflow-hidden">
+      {/* Global Animated background bubbles */}
+      <div className="fixed -top-20 -left-20 w-96 h-96 bg-blob-1 rounded-full mix-blend-screen filter blur-[100px] opacity-60 animate-blob pointer-events-none z-[-1]"></div>
+      <div className="fixed top-40 -right-20 w-96 h-96 bg-blob-2 rounded-full mix-blend-screen filter blur-[100px] opacity-60 animate-blob animation-delay-2000 pointer-events-none z-[-1]"></div>
+      <div className="fixed -bottom-20 left-20 w-96 h-96 bg-blob-3 rounded-full mix-blend-screen filter blur-[100px] opacity-60 animate-blob animation-delay-4000 pointer-events-none z-[-1]"></div>
+
       {role === 'login' && <LoginApp onSuccess={() => setRole('organizer')} />}
       {role === 'organizer' && <OrganizerApp />}
       {role === 'guest' && <GuestApp guestToken={guestToken} />}

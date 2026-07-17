@@ -17,10 +17,13 @@ export default function LoginApp({ onSuccess }: Props) {
     setLoading(true);
 
     try {
+      const initData = WebApp.initDataUnsafe;
+      const telegramId = initData?.user?.id?.toString();
+
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ password, telegramId })
       });
       const data = await res.json();
       
@@ -41,9 +44,9 @@ export default function LoginApp({ onSuccess }: Props) {
   return (
     <div className="min-h-screen flex items-center justify-center p-5 relative overflow-hidden">
       {/* Animated background bubbles */}
-      <div className="absolute -top-20 -left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob"></div>
-      <div className="absolute top-20 -right-20 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-20 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
+      <div className="absolute -top-20 -left-20 w-72 h-72 bg-blob-1 rounded-full mix-blend-screen filter blur-[80px] opacity-70 animate-blob"></div>
+      <div className="absolute top-20 -right-20 w-72 h-72 bg-blob-2 rounded-full mix-blend-screen filter blur-[80px] opacity-70 animate-blob animation-delay-2000"></div>
+      <div className="absolute -bottom-20 left-20 w-72 h-72 bg-blob-3 rounded-full mix-blend-screen filter blur-[80px] opacity-70 animate-blob animation-delay-4000"></div>
 
       <div className="relative w-full max-w-sm glass-panel p-8 rounded-[32px] shadow-2xl flex flex-col items-center">
         <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-6 shadow-lg">

@@ -19,6 +19,7 @@ export default function TablesList({ onNavigate }: Props) {
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [newTableName, setNewTableName] = useState('');
   const [newTableCapacity, setNewTableCapacity] = useState(8);
+  const [newTableShape, setNewTableShape] = useState<'round' | 'rect'>('round');
 
   const handleAddTable = () => {
     if (!newTableName.trim()) return;
@@ -27,7 +28,7 @@ export default function TablesList({ onNavigate }: Props) {
     const newTable: Table = {
       id: newId,
       name: newTableName.trim(),
-      shape: 'round',
+      shape: newTableShape,
       capacity: newTableCapacity,
       group: 'others'
     };
@@ -185,6 +186,24 @@ export default function TablesList({ onNavigate }: Props) {
                 />
               </div>
               
+              <div>
+                <label className="block text-sm font-bold text-gray-500 mb-2">Форма стола</label>
+                <div className="flex bg-gray-100 dark:bg-black/50 p-1 rounded-xl">
+                  <button 
+                    onClick={() => setNewTableShape('round')}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${newTableShape === 'round' ? 'bg-white dark:bg-gray-800 shadow text-blue-500' : 'text-gray-500'}`}
+                  >
+                    Круглый
+                  </button>
+                  <button 
+                    onClick={() => setNewTableShape('rect')}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${newTableShape === 'rect' ? 'bg-white dark:bg-gray-800 shadow text-blue-500' : 'text-gray-500'}`}
+                  >
+                    Прямоугольный
+                  </button>
+                </div>
+              </div>
+
               <button 
                 onClick={handleAddTable}
                 className="w-full mt-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all"
