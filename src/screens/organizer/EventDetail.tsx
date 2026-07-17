@@ -44,6 +44,7 @@ export default function EventDetail({ onNavigate }: Props) {
     { id: 'guests', title: 'Список гостей', icon: <Users size={24} />, desc: `${guestCount} гостей`, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30' },
     { id: 'tables', title: 'Рассадка', icon: <LayoutDashboard size={24} />, desc: 'Управление столами', color: 'text-purple-500', bg: 'bg-purple-100 dark:bg-purple-900/30' },
     { id: 'reminders', title: 'Напоминания', icon: <Bell size={24} />, desc: 'Авто-уведомления', color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30' },
+    { id: 'settings', title: 'Настройки', icon: <Edit3 size={24} />, desc: 'Доступ и пароли', color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-900/30' },
   ];
 
   return (

@@ -40,6 +40,10 @@ export const initDb = async () => {
       id TEXT PRIMARY KEY,
       data TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
 
   // Initialize default data if empty
@@ -82,6 +86,11 @@ export const initDb = async () => {
     for (const t of defaultTables) {
       await db.run('INSERT INTO tables (id, data) VALUES (?, ?)', [t.id, JSON.stringify(t)]);
     }
+  }
+
+  const pw = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_password']);
+  if (!pw) {
+    await db.run('INSERT INTO settings (key, value) VALUES (?, ?)', ['admin_password', '1234']);
   }
 
   dbInstance = db;

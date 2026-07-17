@@ -3,12 +3,13 @@ import { initDb } from './db/mockDb';
 import DevPanel from './components/DevPanel';
 import OrganizerApp from './OrganizerApp';
 import GuestApp from './GuestApp';
+import LoginApp from './LoginApp';
 import WebApp from '@twa-dev/sdk';
 
-export type Role = 'organizer' | 'guest';
+export type Role = 'organizer' | 'guest' | 'login';
 
 function App() {
-  const [role, setRole] = useState<Role>('organizer');
+  const [role, setRole] = useState<Role>('login');
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,18 +20,20 @@ function App() {
     };
     initialize();
     
-    // Check for startapp param from Telegram
+    // Check for start_param or token from URL
     const initData = WebApp.initDataUnsafe;
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+
     if (initData && initData.start_param) {
       setRole('guest');
       setGuestToken(initData.start_param);
+    } else if (urlToken) {
+      setRole('guest');
+      setGuestToken(urlToken);
     } else {
-      // For testing, we can check hash or just default to organizer
-      const hash = window.location.hash;
-      if (hash.startsWith('#guest_')) {
-        setRole('guest');
-        setGuestToken(hash.replace('#', ''));
-      }
+      // Show login
+      setRole('login');
     }
   }, []);
 
@@ -44,11 +47,9 @@ function App() {
 
   return (
     <div className="min-h-screen text-black dark:text-white transition-colors duration-500">
-      {role === 'organizer' ? (
-        <OrganizerApp />
-      ) : (
-        <GuestApp guestToken={guestToken} />
-      )}
+      {role === 'login' && <LoginApp onSuccess={() => setRole('organizer')} />}
+      {role === 'organizer' && <OrganizerApp />}
+      {role === 'guest' && <GuestApp guestToken={guestToken} />}
       
       <DevPanel 
         currentRole={role} 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getTables, getGuests, saveGuests, Table, Guest } from '../../db/mockDb';
+import { getTables, saveTables, getGuests, saveGuests, Table, Guest } from '../../db/mockDb';
 import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Plus, Users, X } from 'lucide-react';
@@ -14,6 +14,31 @@ export default function TablesList({ onNavigate }: Props) {
   
   // Modal state
   const [selectedSeat, setSelectedSeat] = useState<{tableId: string, seatIndex: number} | null>(null);
+
+  // Add Table Modal state
+  const [isAddingTable, setIsAddingTable] = useState(false);
+  const [newTableName, setNewTableName] = useState('');
+  const [newTableCapacity, setNewTableCapacity] = useState(8);
+
+  const handleAddTable = () => {
+    if (!newTableName.trim()) return;
+    
+    const newId = `t_${Date.now()}`;
+    const newTable: Table = {
+      id: newId,
+      name: newTableName.trim(),
+      shape: 'round',
+      capacity: newTableCapacity,
+      group: 'others'
+    };
+    const updated = [...tables, newTable];
+    setTables(updated);
+    saveTables(updated);
+    WebApp.HapticFeedback.notificationOccurred('success');
+    setIsAddingTable(false);
+    setNewTableName('');
+    setNewTableCapacity(8);
+  };
 
   useEffect(() => {
     WebApp.BackButton.show();
@@ -121,25 +146,55 @@ export default function TablesList({ onNavigate }: Props) {
       </div>
 
       <button 
-        onClick={() => {
-          const newId = `t_${Date.now()}`;
-          const newTable: Table = {
-            id: newId,
-            name: `Стол ${tables.length + 1}`,
-            shape: 'round',
-            capacity: 8,
-            group: 'others'
-          };
-          const updated = [...tables, newTable];
-          setTables(updated);
-          // Assuming saveTables is available, need to import it
-          import('../../db/mockDb').then(m => m.saveTables(updated));
-          WebApp.HapticFeedback.notificationOccurred('success');
-        }}
+        onClick={() => setIsAddingTable(true)}
         className="fixed bottom-8 right-6 bg-blue-500 text-white p-5 rounded-full shadow-[0_8px_30px_rgba(59,130,246,0.5)] active:scale-95 transition-all z-20"
       >
         <Plus size={28} />
       </button>
+
+      {/* Add Table Modal */}
+      {isAddingTable && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/50 backdrop-blur-sm" onClick={() => setIsAddingTable(false)}>
+          <div className="w-full max-w-sm bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-black dark:text-white">Новый стол</h3>
+              <button onClick={() => setIsAddingTable(false)} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-500 mb-2">Название стола</label>
+                <input 
+                  type="text"
+                  value={newTableName}
+                  onChange={e => setNewTableName(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 rounded-xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-500 mb-2">Количество мест</label>
+                <input 
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={newTableCapacity}
+                  onChange={e => setNewTableCapacity(parseInt(e.target.value) || 1)}
+                  className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 rounded-xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
+                />
+              </div>
+              
+              <button 
+                onClick={handleAddTable}
+                className="w-full mt-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all"
+              >
+                Создать стол
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Seat Assignment Modal */}
       {selectedSeat && (

@@ -46,7 +46,7 @@ const bot = new TelegramBot(token, { polling: true });
             inline_keyboard: [[
               {
                 text: 'Открыть пригласительный',
-                web_app: { url: amveraUrl } // In a real app we'd pass token or ID, but local storage handles session or we can pass url?token=..
+                web_app: { url: `${amveraUrl}?token=${guestToken}` } 
               }
             ]]
           }
@@ -178,6 +178,29 @@ app.post('/api/reminders', async (req, res) => {
   } catch (err) {
     console.error('Error sending reminders:', err);
     res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { password } = req.body;
+  const db = await getDb();
+  const row = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_password']);
+  if (row && row.value === password) {
+    res.json({ success: true });
+  } else {
+    res.json({ success: false, error: 'Неверный пароль' });
+  }
+});
+
+app.post('/api/auth/change-password', async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  const db = await getDb();
+  const row = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_password']);
+  if (row && row.value === oldPassword) {
+    await db.run('UPDATE settings SET value = ? WHERE key = ?', [newPassword, 'admin_password']);
+    res.json({ success: true });
+  } else {
+    res.json({ success: false, error: 'Текущий пароль неверен' });
   }
 });
 
