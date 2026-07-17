@@ -5,6 +5,9 @@ import TelegramBot from 'node-telegram-bot-api';
 import { getDb } from './db.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,9 +17,13 @@ const PORT = process.env.PORT || 80;
 
 app.use(express.json());
 
-const token = '8697671369:AAH6D5uvOJpXidPOMfHgyJAKSO48V5kGh80';
+const token = process.env.TELEGRAM_BOT_TOKEN;
 const amveraUrl = 'https://qwqwe-ilya12321dq.waw0.amvera.tech'; // Amvera URL
-const JWT_SECRET = 'super-secret-jwt-key-eventplan'; // Should be in ENV in real prod, but this is fine
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-if-not-set';
+
+if (!token) {
+  console.warn("WARNING: TELEGRAM_BOT_TOKEN is not set in environment variables!");
+}
 
 function verifyTelegramWebAppData(telegramInitData) {
   if (!telegramInitData) return false;
@@ -68,7 +75,7 @@ const requireAuth = (req, res, next) => {
   }
 };
 
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(token || 'dummy:token', { polling: !!token });
 bot.on('polling_error', (error) => {
   if (error.code === 'ETELEGRAM' && error.message.includes('409 Conflict')) {
     // Suppress duplicate instance errors in console
