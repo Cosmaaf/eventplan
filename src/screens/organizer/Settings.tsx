@@ -25,7 +25,10 @@ export default function Settings({ onNavigate }: Props) {
     try {
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken') || ''}`
+        },
         body: JSON.stringify({ oldPassword, newPassword })
       });
       const data = await res.json();
@@ -88,10 +91,15 @@ export default function Settings({ onNavigate }: Props) {
         <button 
           onClick={async () => {
             try {
-              const res = await fetch('/api/auth/generate-invite', { method: 'POST' });
+              const res = await fetch('/api/auth/generate-invite', { 
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('adminToken') || ''}`
+                }
+              });
               const data = await res.json();
               if (data.success) {
-                const inviteLink = `https://t.me/ewrewfsd_bot?start=admin_invite_${data.token}`;
+                const inviteLink = `https://t.me/EventPremium_bot?start=admin_invite_${data.token}`;
                 // Let's create an elegant popup or just show alert
                 WebApp.showPopup({
                   title: 'Ссылка-приглашение',

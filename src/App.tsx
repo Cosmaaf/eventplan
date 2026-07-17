@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { initDb } from './db/mockDb';
-import DevPanel from './components/DevPanel';
 import OrganizerApp from './OrganizerApp';
 import GuestApp from './GuestApp';
 import LoginApp from './LoginApp';
@@ -24,7 +23,7 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get('token');
     const adminInvite = urlParams.get('admin_invite');
-    const telegramId = initData?.user?.id?.toString();
+    const telegramInitData = WebApp.initData;
 
     const authCheck = async () => {
       if (adminInvite) {
@@ -33,10 +32,11 @@ function App() {
           const res = await fetch('/api/auth/join', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: adminInvite, telegramId })
+            body: JSON.stringify({ token: adminInvite, telegramInitData })
           });
           const data = await res.json();
           if (data.success) {
+            localStorage.setItem('adminToken', data.token);
             WebApp.showAlert('Вы успешно добавлены как администратор!');
             setRole('organizer');
             return;
@@ -48,23 +48,24 @@ function App() {
         }
       }
 
-      if (initData && initData.start_param) {
+      if (initData && initData.start_param && !initData.start_param.startsWith('admin_invite_')) {
         setRole('guest');
         setGuestToken(initData.start_param);
       } else if (urlToken) {
         setRole('guest');
         setGuestToken(urlToken);
       } else {
-        // Check if telegram ID is already admin
-        if (telegramId) {
+        // Check if user is already admin
+        if (telegramInitData) {
           try {
             const res = await fetch('/api/auth/check', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ telegramId })
+              body: JSON.stringify({ telegramInitData })
             });
             const data = await res.json();
             if (data.success) {
+              localStorage.setItem('adminToken', data.token);
               setRole('organizer');
               return;
             }
@@ -97,14 +98,6 @@ function App() {
       {role === 'login' && <LoginApp onSuccess={() => setRole('organizer')} />}
       {role === 'organizer' && <OrganizerApp />}
       {role === 'guest' && <GuestApp guestToken={guestToken} />}
-      
-      <DevPanel 
-        currentRole={role} 
-        onSwitchRole={(r, token) => {
-          setRole(r);
-          setGuestToken(token || null);
-        }} 
-      />
     </div>
   );
 }

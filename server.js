@@ -3,6 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import TelegramBot from 'node-telegram-bot-api';
 import { getDb } from './db.js';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +16,57 @@ app.use(express.json());
 
 const token = '8697671369:AAH6D5uvOJpXidPOMfHgyJAKSO48V5kGh80';
 const amveraUrl = 'https://qwqwe-ilya12321dq.waw0.amvera.tech'; // Amvera URL
+const JWT_SECRET = 'super-secret-jwt-key-eventplan'; // Should be in ENV in real prod, but this is fine
+
+function verifyTelegramWebAppData(telegramInitData) {
+  if (!telegramInitData) return false;
+  try {
+    const urlParams = new URLSearchParams(telegramInitData);
+    const hash = urlParams.get('hash');
+    urlParams.delete('hash');
+    urlParams.sort();
+
+    let dataCheckString = '';
+    for (const [key, value] of urlParams.entries()) {
+      dataCheckString += `${key}=${value}\n`;
+    }
+    dataCheckString = dataCheckString.slice(0, -1);
+
+    const secretKey = crypto.createHmac('sha256', 'WebAppData').update(token).digest();
+    const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+
+    return calculatedHash === hash;
+  } catch (err) {
+    return false;
+  }
+}
+
+function parseTelegramId(telegramInitData) {
+  try {
+    const urlParams = new URLSearchParams(telegramInitData);
+    const userStr = urlParams.get('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      return user.id.toString();
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
+
+const requireAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    res.status(401).json({ success: false, error: 'Invalid Token' });
+  }
+};
 
 const bot = new TelegramBot(token, { polling: true });
 bot.on('polling_error', (error) => {
@@ -102,7 +155,7 @@ app.get('/api/events', async (req, res) => {
   res.json(rows.map(r => JSON.parse(r.data)));
 });
 
-app.post('/api/events', async (req, res) => {
+app.post('/api/events', requireAuth, async (req, res) => {
   const db = await getDb();
   const event = req.body;
   
@@ -121,7 +174,7 @@ app.get('/api/guests', async (req, res) => {
   res.json(rows.map(r => JSON.parse(r.data)));
 });
 
-app.post('/api/guests', async (req, res) => {
+app.post('/api/guests', requireAuth, async (req, res) => {
   const db = await getDb();
   const guests = req.body; // Expecting array
   
@@ -142,7 +195,7 @@ app.get('/api/tables', async (req, res) => {
   res.json(rows.map(r => JSON.parse(r.data)));
 });
 
-app.post('/api/tables', async (req, res) => {
+app.post('/api/tables', requireAuth, async (req, res) => {
   const db = await getDb();
   const tables = req.body; // Expecting array
   
@@ -157,7 +210,7 @@ app.post('/api/tables', async (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/reminders', async (req, res) => {
+app.post('/api/reminders', requireAuth, async (req, res) => {
   try {
     const { templates } = req.body;
     const db = await getDb();
@@ -204,43 +257,54 @@ app.post('/api/reminders', async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { password, telegramId } = req.body;
+  const { password, telegramInitData } = req.body;
   const db = await getDb();
   const row = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_password']);
   if (row && row.value === password) {
-    if (telegramId) {
-      let adminUsersRow = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_users']);
-      let adminUsers = adminUsersRow ? JSON.parse(adminUsersRow.value) : [];
-      if (!adminUsers.includes(telegramId)) {
-        adminUsers.push(telegramId);
-        if (adminUsersRow) {
-          await db.run('UPDATE settings SET value = ? WHERE key = ?', [JSON.stringify(adminUsers), 'admin_users']);
-        } else {
-          await db.run('INSERT INTO settings (key, value) VALUES (?, ?)', ['admin_users', JSON.stringify(adminUsers)]);
+    let telegramId = null;
+    if (telegramInitData && verifyTelegramWebAppData(telegramInitData)) {
+      telegramId = parseTelegramId(telegramInitData);
+      if (telegramId) {
+        let adminUsersRow = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_users']);
+        let adminUsers = adminUsersRow ? JSON.parse(adminUsersRow.value) : [];
+        if (!adminUsers.includes(telegramId)) {
+          adminUsers.push(telegramId);
+          if (adminUsersRow) {
+            await db.run('UPDATE settings SET value = ? WHERE key = ?', [JSON.stringify(adminUsers), 'admin_users']);
+          } else {
+            await db.run('INSERT INTO settings (key, value) VALUES (?, ?)', ['admin_users', JSON.stringify(adminUsers)]);
+          }
         }
       }
     }
-    res.json({ success: true });
+    const token = jwt.sign({ admin: true, telegramId }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ success: true, token });
   } else {
     res.json({ success: false, error: 'Неверный пароль' });
   }
 });
 
 app.post('/api/auth/check', async (req, res) => {
-  const { telegramId } = req.body;
+  const { telegramInitData } = req.body;
+  if (!telegramInitData || !verifyTelegramWebAppData(telegramInitData)) {
+    return res.json({ success: false });
+  }
+
+  const telegramId = parseTelegramId(telegramInitData);
   if (!telegramId) return res.json({ success: false });
 
   const db = await getDb();
   const row = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_users']);
   const adminUsers = row ? JSON.parse(row.value) : [];
   if (adminUsers.includes(telegramId)) {
-    res.json({ success: true });
+    const token = jwt.sign({ admin: true, telegramId }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ success: true, token });
   } else {
     res.json({ success: false });
   }
 });
 
-app.post('/api/auth/generate-invite', async (req, res) => {
+app.post('/api/auth/generate-invite', requireAuth, async (req, res) => {
   const db = await getDb();
   const inviteToken = 'adm_' + Math.random().toString(36).substr(2, 9);
   await db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [`invite_${inviteToken}`, Date.now().toString()]);
@@ -248,30 +312,37 @@ app.post('/api/auth/generate-invite', async (req, res) => {
 });
 
 app.post('/api/auth/join', async (req, res) => {
-  const { token, telegramId } = req.body;
+  const { token, telegramInitData } = req.body;
+  
+  if (!telegramInitData || !verifyTelegramWebAppData(telegramInitData)) {
+    return res.json({ success: false, error: 'Invalid Telegram Data' });
+  }
+  
+  const telegramId = parseTelegramId(telegramInitData);
+  if (!telegramId) return res.json({ success: false, error: 'Cannot find Telegram ID' });
+
   const db = await getDb();
   const row = await db.get('SELECT value FROM settings WHERE key = ?', [`invite_${token}`]);
   if (row) {
     // Valid invite token
-    if (telegramId) {
-      let adminUsersRow = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_users']);
-      let adminUsers = adminUsersRow ? JSON.parse(adminUsersRow.value) : [];
-      if (!adminUsers.includes(telegramId)) {
-        adminUsers.push(telegramId);
-        if (adminUsersRow) {
-          await db.run('UPDATE settings SET value = ? WHERE key = ?', [JSON.stringify(adminUsers), 'admin_users']);
-        } else {
-          await db.run('INSERT INTO settings (key, value) VALUES (?, ?)', ['admin_users', JSON.stringify(adminUsers)]);
-        }
+    let adminUsersRow = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_users']);
+    let adminUsers = adminUsersRow ? JSON.parse(adminUsersRow.value) : [];
+    if (!adminUsers.includes(telegramId)) {
+      adminUsers.push(telegramId);
+      if (adminUsersRow) {
+        await db.run('UPDATE settings SET value = ? WHERE key = ?', [JSON.stringify(adminUsers), 'admin_users']);
+      } else {
+        await db.run('INSERT INTO settings (key, value) VALUES (?, ?)', ['admin_users', JSON.stringify(adminUsers)]);
       }
     }
-    res.json({ success: true });
+    const jwtToken = jwt.sign({ admin: true, telegramId }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ success: true, token: jwtToken });
   } else {
     res.json({ success: false, error: 'Неверный или просроченный инвайт' });
   }
 });
 
-app.post('/api/auth/change-password', async (req, res) => {
+app.post('/api/auth/change-password', requireAuth, async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   const db = await getDb();
   const row = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_password']);

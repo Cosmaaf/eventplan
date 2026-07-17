@@ -46,6 +46,14 @@ let localCache = {
   tables: [] as Table[]
 };
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('adminToken');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+};
+
 export const initDb = async () => {
   try {
     const [evRes, guRes, taRes] = await Promise.all([
@@ -89,7 +97,7 @@ export const saveEvent = (event: EventData) => {
   }
   fetch('/api/events', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(event)
   });
 };
@@ -102,7 +110,7 @@ export const saveGuests = (guests: Guest[]) => {
   localCache.guests = guests;
   fetch('/api/guests', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(guests)
   });
 };
@@ -115,7 +123,7 @@ export const saveTables = (tables: Table[]) => {
   localCache.tables = tables;
   fetch('/api/tables', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(tables)
   });
 };

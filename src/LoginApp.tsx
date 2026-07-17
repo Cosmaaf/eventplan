@@ -17,17 +17,17 @@ export default function LoginApp({ onSuccess }: Props) {
     setLoading(true);
 
     try {
-      const initData = WebApp.initDataUnsafe;
-      const telegramId = initData?.user?.id?.toString();
+      const telegramInitData = WebApp.initData;
 
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, telegramId })
+        body: JSON.stringify({ password, telegramInitData })
       });
       const data = await res.json();
       
       if (data.success) {
+        localStorage.setItem('adminToken', data.token);
         WebApp.HapticFeedback.notificationOccurred('success');
         onSuccess();
       } else {

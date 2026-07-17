@@ -31,7 +31,10 @@ export default function Reminders({ onNavigate }: Props) {
     try {
       const res = await fetch('/api/reminders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken') || ''}`
+        },
         body: JSON.stringify({ templates: templates.filter(t => t.active).map(t => t.id) })
       });
       const data = await res.json();
