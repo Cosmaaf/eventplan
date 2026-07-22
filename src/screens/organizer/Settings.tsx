@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import WebApp from '@twa-dev/sdk';
-import { OrganizerScreen } from '../../OrganizerApp';
+
 
 import { useNavigate } from 'react-router-dom';
 

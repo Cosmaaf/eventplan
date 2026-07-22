@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Send, CheckSquare, Square } from 'lucide-react';
 

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { getEvent, EventData, getGuests, saveEvent } from '../../db/mockDb';
-import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Users, LayoutDashboard, Bell, Edit3 } from 'lucide-react';
 

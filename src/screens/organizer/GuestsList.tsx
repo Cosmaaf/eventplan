@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { getGuests, saveGuests, Guest, GuestStatus } from '../../db/mockDb';
-import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Search, UserPlus, Check, Send } from 'lucide-react';
 

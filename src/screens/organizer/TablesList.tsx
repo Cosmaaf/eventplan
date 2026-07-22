@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { getTables, saveTables, getGuests, saveGuests, Table, Guest, deleteTable, updateTable } from '../../db/mockDb';
-import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Plus, Users, X, Edit2, Trash2 } from 'lucide-react';
 

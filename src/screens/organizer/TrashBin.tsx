@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { getDeletedEvents, saveEvent, EventData } from '../../db/mockDb';
-import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { RefreshCcw, Trash2 } from 'lucide-react';
 

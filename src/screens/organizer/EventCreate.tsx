@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { saveEvent, EventData } from '../../db/mockDb';
-import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Camera } from 'lucide-react';
 
