@@ -4,13 +4,15 @@ import OrganizerApp from './OrganizerApp';
 import GuestApp from './GuestApp';
 import LoginApp from './LoginApp';
 import WebApp from '@twa-dev/sdk';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 
 export type Role = 'organizer' | 'guest' | 'login';
 
 function App() {
-  const [role, setRole] = useState<Role>('login');
+  const [role, setRole] = useState<Role | null>(null);
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // We will initialize DB later based on role
@@ -81,7 +83,7 @@ function App() {
     };
 
     authCheck();
-  }, []);
+  }, [navigate]);
 
   if (loading) {
     return (
@@ -98,14 +100,29 @@ function App() {
       <div className="fixed top-40 -right-20 w-96 h-96 bg-blob-2 rounded-full mix-blend-screen filter blur-[100px] opacity-60 animate-blob animation-delay-2000 pointer-events-none z-[-1]"></div>
       <div className="fixed -bottom-20 left-20 w-96 h-96 bg-blob-3 rounded-full mix-blend-screen filter blur-[100px] opacity-60 animate-blob animation-delay-4000 pointer-events-none z-[-1]"></div>
 
-      {role === 'login' && <LoginApp onSuccess={async () => {
-        setLoading(true);
-        await initDb();
-        setRole('organizer');
-        setLoading(false);
-      }} />}
-      {role === 'organizer' && <OrganizerApp />}
-      {role === 'guest' && <GuestApp guestToken={guestToken} />}
+      <Routes>
+        <Route path="/invite/:token" element={<GuestApp guestToken={guestToken} />} />
+        <Route path="/login" element={
+          <LoginApp onSuccess={async () => {
+            setLoading(true);
+            await initDb();
+            setRole('organizer');
+            setLoading(false);
+            navigate('/');
+          }} />
+        } />
+        <Route path="/*" element={
+          role === 'organizer' ? <OrganizerApp /> : 
+          role === 'guest' ? <GuestApp guestToken={guestToken} /> : 
+          <LoginApp onSuccess={async () => {
+            setLoading(true);
+            await initDb();
+            setRole('organizer');
+            setLoading(false);
+            navigate('/');
+          }} />
+        } />
+      </Routes>
     </div>
   );
 }

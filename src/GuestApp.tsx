@@ -3,11 +3,15 @@ import { getEvent, getGuests, getTables, Guest, Companion, EventData, initGuestD
 import WebApp from '@twa-dev/sdk';
 import { MapPin, Calendar, Heart, Plus, Minus, UserCheck, Check } from 'lucide-react';
 
+import { useParams } from 'react-router-dom';
+
 type Props = {
-  guestToken: string | null;
+  guestToken?: string | null;
 };
 
-export default function GuestApp({ guestToken }: Props) {
+export default function GuestApp({ guestToken: propToken }: Props) {
+  const { token: routeToken } = useParams();
+  const guestToken = propToken || routeToken;
   const [event, setEvent] = useState<EventData | null>(null);
   const [guest, setGuest] = useState<Guest | null>(null);
   const [tableName, setTableName] = useState<string | null>(null);

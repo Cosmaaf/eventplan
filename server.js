@@ -95,6 +95,12 @@ bot.on('polling_error', (error) => {
     });
     console.log('Menu button set successfully to:', amveraUrl);
 
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      const d = new Date(dateString);
+      return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    };
+
     bot.onText(/\/start (.+)/, async (msg, match) => {
       const chatId = msg.chat.id;
       const startParam = match[1];
@@ -104,38 +110,53 @@ bot.on('polling_error', (error) => {
         bot.sendMessage(chatId, 'Вы приглашены стать со-организатором! Нажмите кнопку ниже, чтобы принять приглашение.', {
           reply_markup: {
             inline_keyboard: [[
-              {
-                text: 'Принять приглашение',
-                web_app: { url: `${amveraUrl}?admin_invite=${token}` } 
-              }
+              { text: 'Принять приглашение', web_app: { url: `${amveraUrl}?admin_invite=${token}` } }
             ]]
           }
         });
         return;
       }
 
-      const db = await getDb();
-      const row = await db.get('SELECT id, data FROM guests WHERE data LIKE ?', [`%"token":"${startParam}"%`]);
-
-      if (row) {
-        const guestData = JSON.parse(row.data);
+      if (startParam.startsWith('guest_')) {
+        const guestToken = startParam.replace('guest_', '');
+        const db = await getDb();
+        const row = await db.get('SELECT id, data FROM guests WHERE data LIKE ?', [`%"token":"${guestToken}"%`]);
+        const eventRow = await db.get('SELECT data FROM events LIMIT 1');
         
-        // Save telegram ID
-        await db.run('UPDATE guests SET telegram_id = ? WHERE id = ?', [chatId.toString(), row.id]);
+        if (row && eventRow) {
+          const guestData = JSON.parse(row.data);
+          const eventData = JSON.parse(eventRow.data);
+          
+          await db.run('UPDATE guests SET telegram_id = ? WHERE id = ?', [chatId.toString(), row.id]);
 
-        bot.sendMessage(chatId, `Здравствуйте, ${guestData.firstName}! Вы приглашены на свадьбу! Нажмите кнопку ниже, чтобы открыть ваш персональный пригласительный.`, {
-          reply_markup: {
-            inline_keyboard: [[
-              {
-                text: 'Открыть пригласительный',
-                web_app: { url: `${amveraUrl}?token=${guestToken}` } 
-              }
-            ]]
-          }
-        });
-      } else {
-        bot.sendMessage(chatId, 'К сожалению, приглашение не найдено.');
+          const messageText = `🎉 Вас приглашают на мероприятие «${eventData.title}»\n📅 ${formatDate(eventData.date)}\n📍 ${eventData.address}\n\nПожалуйста, подтвердите своё участие:`;
+          
+          bot.sendMessage(chatId, messageText, {
+            reply_markup: {
+              inline_keyboard: [[
+                { text: 'Открыть приглашение', web_app: { url: `${amveraUrl}/#/invite/${guestToken}` } }
+              ]]
+            }
+          });
+        } else {
+          bot.sendMessage(chatId, 'К сожалению, приглашение не найдено.');
+        }
       }
+    });
+
+    bot.onText(/\/start$/, (msg) => {
+      bot.sendMessage(msg.chat.id, 'Добро пожаловать в EventPlan! Нажмите кнопку ниже или в меню, чтобы открыть приложение.', {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: 'Открыть EventPlan', web_app: { url: amveraUrl } }
+          ]]
+        }
+      });
+    });
+
+    bot.onText(/\/help/, (msg) => {
+      const helpText = `🛠 Инструкция по использованию:\n\nОрганизаторам:\nИспользуйте кнопку "Меню" -> "EventPlan" или нажмите /start, чтобы войти в панель управления. Там вы сможете создать событие, добавить гостей и настроить рассадку.\n\nГостям:\nПерейдите по уникальной ссылке-приглашению (или нажмите /start guest_ВАШ_ТОКЕН), чтобы открыть ваш персональный билет, где вы сможете подтвердить участие и узнать детали.`;
+      bot.sendMessage(msg.chat.id, helpText);
     });
 
     bot.onText(/\/start$/, (msg) => {
@@ -203,11 +224,37 @@ app.post('/api/guest/:token/rsvp', async (req, res) => {
   const token = req.params.token;
   const { status, companions } = req.body;
   const row = await db.get('SELECT id, data FROM guests WHERE data LIKE ?', [`%"token":"${token}"%`]);
+  
   if (row) {
     const guestData = JSON.parse(row.data);
+    const oldStatus = guestData.status;
     guestData.status = status;
     guestData.companions = companions;
     await db.run('UPDATE guests SET data = ? WHERE id = ?', [JSON.stringify(guestData), row.id]);
+    
+    // Notify Organizer if status changed to agree or disagree
+    if (oldStatus !== status && (status === 'agree' || status === 'disagree')) {
+      const adminUsersRow = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_users']);
+      const adminUsers = adminUsersRow ? JSON.parse(adminUsersRow.value) : [];
+      
+      let notificationText = '';
+      if (status === 'agree') {
+        let extraCount = companions ? companions.length : 0;
+        let extraStr = extraCount > 0 ? ` (+${extraCount} гостя)` : '';
+        notificationText = `✅ ${guestData.firstName} ${guestData.lastName} подтвердил участие${extraStr}`;
+      } else {
+        notificationText = `❌ ${guestData.firstName} ${guestData.lastName} не сможет прийти`;
+      }
+
+      for (const adminId of adminUsers) {
+        try {
+          await bot.sendMessage(adminId, notificationText);
+        } catch (e) {
+          console.error(`Failed to notify admin ${adminId}:`, e.message);
+        }
+      }
+    }
+
     res.json({ success: true });
   } else {
     res.json({ success: false, error: 'Guest not found' });
@@ -401,69 +448,103 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Auto Reminders Service
-let lastSentDate = '';
+// Auto Reminders Service (APScheduler equivalent)
+let lastSentDates = { '7d': '', '3d': '', '1d': '' };
 
 setInterval(async () => {
   try {
     const now = new Date();
-    // Run at 10 AM UTC (or local time depending on server)
-    if (now.getHours() === 10) {
-      const todayStr = now.toISOString().split('T')[0];
-      if (lastSentDate === todayStr) return; // Already sent today
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const todayStr = now.toISOString().split('T')[0];
+
+    // Check every 30 mins: 12:00 for 7d and 3d, 10:00 for 1d
+    const is12 = hours === 12 && minutes < 30;
+    const is10 = hours === 10 && minutes < 30;
+    
+    if (!is12 && !is10) return;
+
+    const db = await getDb();
+    const eventRow = await db.get('SELECT data FROM events LIMIT 1');
+    if (!eventRow) return;
+    const event = JSON.parse(eventRow.data);
+    if (!event.date) return;
+    
+    const daysUntil = Math.ceil((new Date(event.date).getTime() - Date.now()) / (1000 * 3600 * 24));
+    
+    const formatDate = (dateString) => {
+      const d = new Date(dateString);
+      return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    };
+
+    let activeTemplate = null;
+    if (daysUntil === 7 && is12 && lastSentDates['7d'] !== todayStr) activeTemplate = '7d';
+    if (daysUntil === 3 && is12 && lastSentDates['3d'] !== todayStr) activeTemplate = '3d';
+    if (daysUntil === 1 && is10 && lastSentDates['1d'] !== todayStr) activeTemplate = '1d';
+
+    if (activeTemplate) {
+      const rows = await db.all('SELECT data, telegram_id FROM guests WHERE telegram_id IS NOT NULL');
       
-      const db = await getDb();
-      // Fetch event data to know the event date
-      const eventRow = await db.get('SELECT data FROM events LIMIT 1');
-      if (!eventRow) return;
-      const event = JSON.parse(eventRow.data);
-      if (!event.date) return;
-      
-      const daysUntil = Math.max(0, Math.ceil((new Date(event.date).getTime() - Date.now()) / (1000 * 3600 * 24)));
-      let templates = [];
-      
-      if (daysUntil === 7) templates.push('7d');
-      else if (daysUntil === 3) templates.push('3d');
-      else if (daysUntil === 1) templates.push('1d');
-      
-      if (templates.length > 0) {
-        // We can reuse the reminder logic
-        const rows = await db.all('SELECT data, telegram_id FROM guests WHERE telegram_id IS NOT NULL');
+      const adminUsersRow = await db.get('SELECT value FROM settings WHERE key = ?', ['admin_users']);
+      const adminUsers = adminUsersRow ? JSON.parse(adminUsersRow.value) : [];
+
+      for (const row of rows) {
+        if (!row.telegram_id) continue;
+        const guest = JSON.parse(row.data);
         
-        for (const row of rows) {
-          if (!row.telegram_id) continue;
-          const guest = JSON.parse(row.data);
-          let messageText = '';
-          
-          if (templates.includes('7d') && guest.status === 'invited') {
-            messageText = `Здравствуйте, ${guest.firstName}! Пожалуйста, подтвердите ваше присутствие на нашем мероприятии!`;
-          } else if (templates.includes('1d') && guest.status === 'agree') {
-            messageText = `Здравствуйте, ${guest.firstName}! Напоминаем, что наше мероприятие уже завтра! Ждем вас!`;
-          } else if (templates.includes('3d') && guest.status === 'agree') {
-            messageText = `Здравствуйте, ${guest.firstName}! Напоминаем про дресс-код на наше мероприятие через 3 дня!`;
-          }
-          
-          if (messageText) {
-            try {
-              await bot.sendMessage(row.telegram_id, messageText, {
-                reply_markup: {
-                  inline_keyboard: [[
-                    { text: 'Открыть EventPlan', web_app: { url: `${amveraUrl}?token=${guest.token}` } }
-                  ]]
-                }
-              });
-            } catch(e) {
-              console.error(e);
+        // Fetch table info if available
+        let tableStr = '';
+        if (guest.tableId) {
+          const tableRow = await db.get('SELECT data FROM tables WHERE id = ?', [guest.tableId]);
+          if (tableRow) {
+            const table = JSON.parse(tableRow.data);
+            if (activeTemplate === '3d') {
+              tableStr = `\n🪑 Ваш стол: ${table.name}  |  Место: ${guest.seatIndex !== undefined ? guest.seatIndex + 1 : '?'} из ${table.capacity}`;
+            } else if (activeTemplate === '1d') {
+              tableStr = `\n🪑 Ваш стол: ${table.name}`;
             }
           }
         }
-        lastSentDate = todayStr;
+
+        let messageText = '';
+        if (activeTemplate === '7d' && ['invited', 'prepared', 'delivered'].includes(guest.status)) {
+          messageText = `📢 Напоминаем! До мероприятия «${event.title}» осталось 7 дней.\nВы ещё не подтвердили участие.\n📅 ${formatDate(event.date)}  📍 ${event.address}`;
+        } else if (activeTemplate === '3d' && guest.status === 'agree') {
+          messageText = `⏰ До «${event.title}» осталось 3 дня!\n📅 ${formatDate(event.date)}\n📍 ${event.address}${tableStr}`;
+        } else if (activeTemplate === '1d' && guest.status === 'agree') {
+          messageText = `🔔 Завтра — «${event.title}»!\n📅 ${formatDate(event.date)}\n📍 ${event.address}${tableStr}`;
+        }
+
+        if (messageText) {
+          try {
+            await bot.sendMessage(row.telegram_id, messageText, {
+              reply_markup: activeTemplate !== '1d' ? {
+                inline_keyboard: [[
+                  { text: 'Открыть приглашение', web_app: { url: `${amveraUrl}/#/invite/${guest.token}` } }
+                ]]
+              } : undefined
+            });
+          } catch(e) {
+            console.error(e);
+          }
+        }
       }
+      
+      // For 3 days, notify organizers too (as per TZ)
+      if (activeTemplate === '3d') {
+        for (const adminId of adminUsers) {
+          try {
+            await bot.sendMessage(adminId, `⏰ До «${event.title}» осталось 3 дня! Рассылка подтвердившим гостям отправлена.`);
+          } catch(e) {}
+        }
+      }
+
+      lastSentDates[activeTemplate] = todayStr;
     }
   } catch (err) {
     console.error('Auto reminder error:', err);
   }
-}, 60 * 60 * 1000); // Check every hour
+}, 30 * 60 * 1000); // Check every 30 mins
 
 
 app.listen(PORT, () => {

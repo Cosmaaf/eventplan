@@ -3,11 +3,10 @@ import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Send, CheckSquare, Square } from 'lucide-react';
 
-type Props = {
-  onNavigate: (screen: OrganizerScreen) => void;
-};
+import { useNavigate } from 'react-router-dom';
 
-export default function Reminders({ onNavigate }: Props) {
+export default function Reminders() {
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState([
     { id: '7d', label: 'За 7 дней до события (Ожидающие ответа)', active: true },
     { id: '3d', label: 'За 3 дня (Подтвердившие участие - дресс-код)', active: false },
@@ -16,9 +15,9 @@ export default function Reminders({ onNavigate }: Props) {
 
   useEffect(() => {
     WebApp.BackButton.show();
-    WebApp.BackButton.onClick(() => onNavigate('event_detail'));
-    return () => WebApp.BackButton.offClick(() => onNavigate('event_detail'));
-  }, [onNavigate]);
+    WebApp.BackButton.onClick(() => navigate('/events/1'));
+    return () => WebApp.BackButton.offClick(() => navigate('/events/1'));
+  }, [navigate]);
 
   const toggle = (id: string) => {
     setTemplates(templates.map(t => t.id === id ? { ...t, active: !t.active } : t));

@@ -4,11 +4,10 @@ import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Search, UserPlus, Check, Send } from 'lucide-react';
 
-type Props = {
-  onNavigate: (screen: OrganizerScreen) => void;
-};
+import { useNavigate } from 'react-router-dom';
 
-export default function GuestsList({ onNavigate }: Props) {
+export default function GuestsList() {
+  const navigate = useNavigate();
   const [guests, setGuests] = useState<Guest[]>([]);
   const [tab, setTab] = useState<'prepared' | 'invited' | 'responded'>('prepared');
   const [search, setSearch] = useState('');
@@ -19,9 +18,9 @@ export default function GuestsList({ onNavigate }: Props) {
   
   useEffect(() => {
     WebApp.BackButton.show();
-    WebApp.BackButton.onClick(() => onNavigate('event_detail'));
-    return () => WebApp.BackButton.offClick(() => onNavigate('event_detail'));
-  }, [onNavigate]);
+    WebApp.BackButton.onClick(() => navigate('/events/1'));
+    return () => WebApp.BackButton.offClick(() => navigate('/events/1'));
+  }, [navigate]);
 
   useEffect(() => {
     setGuests(getGuests());
@@ -155,7 +154,7 @@ export default function GuestsList({ onNavigate }: Props) {
               if (tab === 'prepared') {
                 toggleSelect(guest.id);
               } else {
-                setSelectedGuestDetail(guest);
+                navigate(`/events/1/guests/${guest.id}`);
               }
             }}
             className="apple-glass p-5 rounded-[24px] shadow-lg flex items-center gap-4 hover:scale-[1.01] transition-transform cursor-pointer"

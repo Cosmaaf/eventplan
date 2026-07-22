@@ -4,11 +4,10 @@ import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Camera } from 'lucide-react';
 
-type Props = {
-  onNavigate: (screen: OrganizerScreen) => void;
-};
+import { useNavigate } from 'react-router-dom';
 
-export default function EventCreate({ onNavigate }: Props) {
+export default function EventCreate() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<Partial<EventData>>({
     title: '',
     date: '',
@@ -20,9 +19,9 @@ export default function EventCreate({ onNavigate }: Props) {
 
   useEffect(() => {
     WebApp.BackButton.show();
-    WebApp.BackButton.onClick(() => onNavigate('events'));
-    return () => WebApp.BackButton.offClick(() => onNavigate('events'));
-  }, [onNavigate]);
+    WebApp.BackButton.onClick(() => navigate('/'));
+    return () => WebApp.BackButton.offClick(() => navigate('/'));
+  }, [navigate]);
 
   useEffect(() => {
     const isValid = formData.title && formData.date && formData.address;
@@ -51,7 +50,7 @@ export default function EventCreate({ onNavigate }: Props) {
     saveEvent(newEvent);
     WebApp.HapticFeedback.notificationOccurred('success');
     WebApp.showAlert('Успешно сохранено', () => {
-      onNavigate('events');
+      navigate('/');
     });
   };
 

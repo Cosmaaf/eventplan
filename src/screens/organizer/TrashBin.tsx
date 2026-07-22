@@ -4,21 +4,20 @@ import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { RefreshCcw, Trash2 } from 'lucide-react';
 
-type Props = {
-  onNavigate: (screen: OrganizerScreen) => void;
-};
+import { useNavigate } from 'react-router-dom';
 
-export default function TrashBin({ onNavigate }: Props) {
+export default function TrashBin() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<EventData[]>([]);
 
   useEffect(() => {
     WebApp.BackButton.show();
-    WebApp.BackButton.onClick(() => onNavigate('events'));
+    WebApp.BackButton.onClick(() => navigate('/'));
     
     setEvents(getDeletedEvents());
     
-    return () => WebApp.BackButton.offClick(() => onNavigate('events'));
-  }, [onNavigate]);
+    return () => WebApp.BackButton.offClick(() => navigate('/'));
+  }, [navigate]);
 
   const handleRestore = (id: number) => {
     const event = getDeletedEvents().find(e => e.id === id);

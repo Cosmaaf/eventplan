@@ -4,11 +4,10 @@ import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Plus, Users, X, Edit2, Trash2 } from 'lucide-react';
 
-type Props = {
-  onNavigate: (screen: OrganizerScreen) => void;
-};
+import { useNavigate } from 'react-router-dom';
 
-export default function TablesList({ onNavigate }: Props) {
+export default function TablesList() {
+  const navigate = useNavigate();
   const [tables, setTables] = useState<Table[]>([]);
   const [guests, setGuests] = useState<Guest[]>([]);
   
@@ -83,9 +82,9 @@ export default function TablesList({ onNavigate }: Props) {
 
   useEffect(() => {
     WebApp.BackButton.show();
-    WebApp.BackButton.onClick(() => onNavigate('event_detail'));
-    return () => WebApp.BackButton.offClick(() => onNavigate('event_detail'));
-  }, [onNavigate]);
+    WebApp.BackButton.onClick(() => navigate('/events/1'));
+    return () => WebApp.BackButton.offClick(() => navigate('/events/1'));
+  }, [navigate]);
 
   useEffect(() => {
     setTables(getTables());

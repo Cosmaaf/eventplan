@@ -2,20 +2,19 @@ import { useState, useEffect } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { OrganizerScreen } from '../../OrganizerApp';
 
-type Props = {
-  onNavigate: (screen: OrganizerScreen) => void;
-};
+import { useNavigate } from 'react-router-dom';
 
-export default function Settings({ onNavigate }: Props) {
+export default function Settings() {
+  const navigate = useNavigate();
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     WebApp.BackButton.show();
-    WebApp.BackButton.onClick(() => onNavigate('event_detail'));
-    return () => WebApp.BackButton.offClick(() => onNavigate('event_detail'));
-  }, [onNavigate]);
+    WebApp.BackButton.onClick(() => navigate('/events/1'));
+    return () => WebApp.BackButton.offClick(() => navigate('/events/1'));
+  }, [navigate]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +37,7 @@ export default function Settings({ onNavigate }: Props) {
         WebApp.showAlert('Пароль успешно изменён!');
         setOldPassword('');
         setNewPassword('');
-        onNavigate('event_detail');
+        navigate('/events/1');
       } else {
         WebApp.HapticFeedback.notificationOccurred('error');
         WebApp.showAlert(data.error || 'Ошибка смены пароля');

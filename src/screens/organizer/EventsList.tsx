@@ -4,11 +4,10 @@ import { OrganizerScreen } from '../../OrganizerApp';
 import { Calendar, MapPin, Plus, ChevronRight } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 
-type Props = {
-  onNavigate: (screen: OrganizerScreen) => void;
-};
+import { useNavigate } from 'react-router-dom';
 
-export default function EventsList({ onNavigate }: Props) {
+export default function EventsList() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<EventData[]>([]);
   const [guestStats, setGuestStats] = useState({ total: 0, invited: 0, agree: 0, disagree: 0 });
   const [eventToDelete, setEventToDelete] = useState<number | null>(null);
@@ -53,7 +52,7 @@ export default function EventsList({ onNavigate }: Props) {
         {events.length > 0 ? events.map(event => (
           <div 
             key={event.id}
-            onClick={() => onNavigate('event_detail')}
+            onClick={() => navigate('/events/1')}
             className="apple-glass rounded-[32px] p-5 shadow-[0_4px_24px_rgba(0,0,0,0.04)] dark:shadow-none border border-black/5 dark:border-white/10 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer relative overflow-hidden group bg-white dark:bg-[#1c1c1e]"
           >
             {event.photo ? (
@@ -112,7 +111,7 @@ export default function EventsList({ onNavigate }: Props) {
       </div>
 
       <button 
-        onClick={() => onNavigate('create_event')}
+        onClick={() => navigate('/events/new')}
         className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 rounded-[20px] font-bold text-lg shadow-[0_8px_30px_rgba(59,130,246,0.4)] hover:shadow-[0_8px_40px_rgba(59,130,246,0.6)] active:scale-95 transition-all flex items-center justify-center gap-2 mb-4"
       >
         <Plus size={24} />
@@ -120,7 +119,7 @@ export default function EventsList({ onNavigate }: Props) {
       </button>
 
       <button 
-        onClick={() => onNavigate('trash_bin')}
+        onClick={() => navigate('/trash')}
         className="w-full text-center text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors py-2"
       >
         Корзина

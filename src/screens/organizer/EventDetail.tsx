@@ -4,19 +4,18 @@ import { OrganizerScreen } from '../../OrganizerApp';
 import WebApp from '@twa-dev/sdk';
 import { Users, LayoutDashboard, Bell, Edit3 } from 'lucide-react';
 
-type Props = {
-  onNavigate: (screen: OrganizerScreen) => void;
-};
+import { useNavigate } from 'react-router-dom';
 
-export default function EventDetail({ onNavigate }: Props) {
+export default function EventDetail() {
+  const navigate = useNavigate();
   const [event, setEvent] = useState<EventData | null>(null);
   const [guestCount, setGuestCount] = useState(0);
 
   useEffect(() => {
     WebApp.BackButton.show();
-    WebApp.BackButton.onClick(() => onNavigate('events'));
-    return () => WebApp.BackButton.offClick(() => onNavigate('events'));
-  }, [onNavigate]);
+    WebApp.BackButton.onClick(() => navigate('/'));
+    return () => WebApp.BackButton.offClick(() => navigate('/'));
+  }, [navigate]);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -153,7 +152,7 @@ export default function EventDetail({ onNavigate }: Props) {
         {features.map(f => (
           <div 
             key={f.id}
-            onClick={() => onNavigate(f.id as OrganizerScreen)}
+            onClick={() => navigate(`/events/1/${f.id}`)}
             className="apple-glass rounded-[24px] p-5 shadow-xl hover:scale-[1.02] active:scale-95 transition-all cursor-pointer flex flex-col items-start"
           >
             <div className={`p-4 rounded-[20px] mb-4 ${f.bg} ${f.color} shadow-inner`}>

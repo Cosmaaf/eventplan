@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import EventsList from './screens/organizer/EventsList';
 import EventCreate from './screens/organizer/EventCreate';
 import EventDetail from './screens/organizer/EventDetail';
@@ -7,27 +7,22 @@ import TablesList from './screens/organizer/TablesList';
 import Reminders from './screens/organizer/Reminders';
 import Settings from './screens/organizer/Settings';
 import TrashBin from './screens/organizer/TrashBin';
-
-export type OrganizerScreen = 'events' | 'create_event' | 'event_detail' | 'guests' | 'tables' | 'reminders' | 'settings' | 'trash_bin';
+import GuestDetail from './screens/organizer/GuestDetail';
 
 export default function OrganizerApp() {
-  const [currentScreen, setCurrentScreen] = useState<OrganizerScreen>('events');
-
-  const navigate = (screen: OrganizerScreen) => {
-    setCurrentScreen(screen);
-    window.scrollTo(0, 0);
-  };
-
   return (
     <div className="pb-20">
-      {currentScreen === 'events' && <EventsList onNavigate={navigate} />}
-      {currentScreen === 'create_event' && <EventCreate onNavigate={navigate} />}
-      {currentScreen === 'event_detail' && <EventDetail onNavigate={navigate} />}
-      {currentScreen === 'guests' && <GuestsList onNavigate={navigate} />}
-      {currentScreen === 'tables' && <TablesList onNavigate={navigate} />}
-      {currentScreen === 'reminders' && <Reminders onNavigate={navigate} />}
-      {currentScreen === 'settings' && <Settings onNavigate={navigate} />}
-      {currentScreen === 'trash_bin' && <TrashBin onNavigate={navigate} />}
+      <Routes>
+        <Route path="/" element={<EventsList />} />
+        <Route path="/create_event" element={<EventCreate />} />
+        <Route path="/events/:id" element={<EventDetail />} />
+        <Route path="/events/:id/guests" element={<GuestsList />} />
+        <Route path="/events/:id/guests/:guestId" element={<GuestDetail />} />
+        <Route path="/events/:id/tables" element={<TablesList />} />
+        <Route path="/events/:id/reminders" element={<Reminders />} />
+        <Route path="/events/:id/settings" element={<Settings />} />
+        <Route path="/trash_bin" element={<TrashBin />} />
+      </Routes>
     </div>
   );
 }
