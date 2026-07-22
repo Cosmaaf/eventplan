@@ -118,7 +118,7 @@ bot.on('polling_error', (error) => {
       }
 
       if (startParam.startsWith('guest_')) {
-        const guestToken = startParam.replace('guest_', '');
+        const guestToken = startParam;
         const db = await getDb();
         const row = await db.get('SELECT id, data FROM guests WHERE data LIKE ?', [`%"token":"${guestToken}"%`]);
         const eventRow = await db.get('SELECT data FROM events LIMIT 1');
