@@ -7,3 +7,7 @@ build:
   additionalCommands: npm run build
 run:
   command: node server.js
+  persistence:
+    mounts:
+      - mountPath: /data
+        name: data
