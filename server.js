@@ -134,7 +134,7 @@ bot.on('polling_error', (error) => {
           bot.sendMessage(chatId, messageText, {
             reply_markup: {
               inline_keyboard: [[
-                { text: 'Открыть приглашение', web_app: { url: `${amveraUrl}/#/invite/${guestToken}` } }
+                { text: 'Открыть приглашение', web_app: { url: `${amveraUrl}/invite/${guestToken}` } }
               ]]
             }
           });
@@ -520,7 +520,7 @@ setInterval(async () => {
             await bot.sendMessage(row.telegram_id, messageText, {
               reply_markup: activeTemplate !== '1d' ? {
                 inline_keyboard: [[
-                  { text: 'Открыть приглашение', web_app: { url: `${amveraUrl}/#/invite/${guest.token}` } }
+                  { text: 'Открыть приглашение', web_app: { url: `${amveraUrl}/invite/${guest.token}` } }
                 ]]
               } : undefined
             });
