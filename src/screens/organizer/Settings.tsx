@@ -3,6 +3,7 @@ import WebApp from '@twa-dev/sdk';
 
 
 import { useNavigate } from 'react-router-dom';
+import { localCache } from '../../db/mockDb';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -98,7 +99,7 @@ export default function Settings() {
               });
               const data = await res.json();
               if (data.success) {
-                const inviteLink = `https://t.me/EventPremium_bot?start=admin_invite_${data.token}`;
+                const inviteLink = `https://t.me/${localCache.botUsername || 'EventPremium_bot'}?start=admin_invite_${data.token}`;
                 // Let's create an elegant popup or just show alert
                 WebApp.showPopup({
                   title: 'Ссылка-приглашение',

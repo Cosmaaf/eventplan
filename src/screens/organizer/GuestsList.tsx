@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getGuests, saveGuests, Guest, GuestStatus } from '../../db/mockDb';
+import { getGuests, saveGuests, Guest, GuestStatus, localCache } from '../../db/mockDb';
 import WebApp from '@twa-dev/sdk';
 import { Search, UserPlus, Check, Send } from 'lucide-react';
 
@@ -61,7 +61,7 @@ export default function GuestsList() {
     const firstGuest = guests.find(g => g.id === firstSelectedId);
     
     if (firstGuest) {
-      const inviteLink = `https://t.me/EventPremium_bot?start=${firstGuest.token}`;
+      const inviteLink = `https://t.me/${localCache.botUsername}?start=${firstGuest.token}`;
       const text = `Привет! Приглашаю тебя на мероприятие: ${inviteLink}`;
       
       if (firstGuest.telegramUsername) {

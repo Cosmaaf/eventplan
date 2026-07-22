@@ -43,7 +43,8 @@ export type Table = {
 let localCache = {
   events: [] as EventData[],
   guests: [] as Guest[],
-  tables: [] as Table[]
+  tables: [] as Table[],
+  botUsername: 'EventPremium_bot' as string
 };
 
 const getAuthHeaders = () => {
@@ -56,14 +57,21 @@ const getAuthHeaders = () => {
 
 export const initDb = async () => {
   try {
-    const [evRes, guRes, taRes] = await Promise.all([
+    const [evRes, guRes, taRes, confRes] = await Promise.all([
       fetch('/api/events'),
       fetch('/api/guests', { headers: getAuthHeaders() }),
-      fetch('/api/tables', { headers: getAuthHeaders() })
+      fetch('/api/tables', { headers: getAuthHeaders() }),
+      fetch('/api/config')
     ]);
     const evData = await evRes.json();
     const guData = await guRes.json();
     const taData = await taRes.json();
+    
+    if (confRes.ok) {
+      const confData = await confRes.json();
+      if (confData.botUsername) localCache.botUsername = confData.botUsername;
+    }
+
     localCache.events = Array.isArray(evData) ? evData : [];
     localCache.guests = Array.isArray(guData) ? guData : [];
     localCache.tables = Array.isArray(taData) ? taData : [];

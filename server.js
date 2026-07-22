@@ -84,8 +84,15 @@ bot.on('polling_error', (error) => {
   console.error('Polling error:', error);
 });
 
+let botUsername = 'EventPremium_bot'; // fallback
+
 (async () => {
   try {
+    if (token) {
+      const me = await bot.getMe();
+      botUsername = me.username;
+      console.log('Bot username resolved:', botUsername);
+    }
     await bot.setChatMenuButton({
       menu_button: JSON.stringify({
         type: 'web_app',
@@ -341,6 +348,10 @@ app.post('/api/reminders', requireAuth, async (req, res) => {
     console.error('Error sending reminders:', err);
     res.status(500).json({ success: false, error: 'Internal Server Error' });
   }
+});
+
+app.get('/api/config', (req, res) => {
+  res.json({ botUsername });
 });
 
 app.post('/api/auth/login', async (req, res) => {
